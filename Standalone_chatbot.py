@@ -8,7 +8,7 @@ from langchain_community.embeddings import HuggingFaceEmbeddings
 
 from langchain_community.document_loaders import DirectoryLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.vectorstores import Chroma
+from langchain_community.vectorstores import FAISS
 from langchain.prompts import PromptTemplate
 from langchain.chains import create_retrieval_chain
 from langchain.chains.combine_documents import create_stuff_documents_chain
@@ -40,7 +40,7 @@ def load_or_create_vector_db():
     embeddings = HuggingFaceEmbeddings(model_name=model_name)
     # ----------------------------------------------------
 
-    vectorstore = Chroma.from_documents(documents=splits, embedding=embeddings)
+    vectorstore = FAISS.from_documents(documents=splits, embedding=embeddings)
     return vectorstore
 
 prompt_template_string = """
