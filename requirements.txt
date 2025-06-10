@@ -9,3 +9,5 @@ unstructured
 pytesseract
 Pillow
 gTTS
+langchain-groq
+sentence-transformers
