@@ -67,7 +67,7 @@ if not llm:
 # --- Tabbladen voor de Twee Hoofdfuncties ---
 tab1, tab2 = st.tabs(["✉️ **Brief Laten Uitleggen**", "✍️ **Help Mij Schrijven**"])
 
-# --- Tab 1: Brief Uitleggen (Jouw bestaande code) ---
+# --- Tab 1: Brief Uitleggen (Jouw bestaande code)  ---
 with tab1:
     st.header("Laat je brief uitleggen")
     st.write("Plak de tekst van een moeilijke brief hieronder, of maak een foto van je brief.")
