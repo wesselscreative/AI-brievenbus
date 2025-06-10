@@ -1,0 +1,11 @@
+streamlit
+langchain
+langchain-community
+langchain-core
+ollama
+chromadb
+faiss-cpu
+unstructured
+pytesseract
+Pillow
+gTTS
