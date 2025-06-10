@@ -17,57 +17,73 @@ from gtts import gTTS
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_PATH = os.path.join(SCRIPT_DIR, "Data")
 
-# --- Functies ---
+# --- Functies voor de AI-componenten (beter voor caching) ---
 
 @st.cache_resource
-def load_or_create_vector_db():
+def load_vector_db():
+    """Laadt de documenten en maakt de vector database aan."""
     loader = DirectoryLoader(DATA_PATH, glob="**/*.txt", show_progress=True)
     docs = loader.load()
     if not docs:
-        st.error(f"Geen documenten gevonden in de '{DATA_PATH}' map.")
+        st.error(f"Geen documenten gevonden in de '{DATA_PATH}' map. De app kan niet starten.")
         st.stop()
+    
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
     splits = text_splitter.split_documents(docs)
+    
     model_name = "sentence-transformers/all-MiniLM-L6-v2"
     embeddings = HuggingFaceEmbeddings(model_name=model_name)
+    
     vectorstore = FAISS.from_documents(documents=splits, embedding=embeddings)
     return vectorstore
 
-# --- Hoofdapplicatie ---
-
-st.set_page_config(page_title="Hulp bij Moeilijke Brieven", layout="wide")
-st.title("🤖 AI Hulp voor Moeilijke Brieven")
-
-# --- Initialiseer de AI (gebeurt maar 1 keer) ---
 @st.cache_resource
-def get_ai_components():
-    vectorstore = load_or_create_vector_db()
+def get_llm():
+    """Initialiseert en retourneert de LLM. Crasht netjes als de key mist."""
     try:
         llm = ChatGroq(
             temperature=0, 
             groq_api_key=st.secrets["GROQ_API_KEY"], 
             model_name="llama3-70b-8192"
         )
-    except Exception as e:
-        print(e) # Print de fout naar de console voor debuggen
-        return None, None
-    
-    retriever_from_llm = MultiQueryRetriever.from_llm(
-        retriever=vectorstore.as_retriever(), llm=llm
-    )
-    return llm, retriever_from_llm
+        return llm
+    except KeyError:
+        return None
 
-llm, retriever_from_llm = get_ai_components()
+# --- Prompts ---
 
-# Als de API key niet is gevonden, stop de app
+PROMPT_UITLEG = PromptTemplate.from_template(
+    """
+    Je bent een AI-assistent die laaggeletterde mensen in Nederland helpt met het begrijpen van officiële brieven.
+    Jouw taak is om de belangrijkste punten uit een brief te halen. Gebruik de CONTEXT om je antwoord te baseren op vergelijkbare documenten.
+
+    ANALYSEER EERST DE VRAAG. Als de tekst in de VRAAG duidelijk GEEN officiële brief is (bijvoorbeeld een recept, een nieuwsartikel, of onzin), negeer dan de CONTEXT en antwoord letterlijk en alleen met de volgende zin:
+    "Deze tekst lijkt geen officiële brief te zijn. Ik kan je hier helaas niet mee helpen. Probeer een foto te maken van een brief van bijvoorbeeld de overheid, een bedrijf of een ziekenhuis."
+
+    Als de tekst in de VRAAG WEL een officiële brief lijkt, vat dan de belangrijkste punten samen in simpele taal (B1-niveau). Focus op: Wie heeft de brief gestuurd? Wat moet de persoon DOEN? Staat er een bedrag of datum in?
+
+    CONTEXT: {context}
+    VRAAG: {question}
+    HELPENDE ANTWOORD IN SIMPELE TAAL:
+    """
+)
+
+# --- Hoofdapplicatie ---
+
+st.set_page_config(page_title="Hulp bij Moeilijke Brieven", layout="wide")
+st.title("🤖 AI Hulp voor Moeilijke Brieven")
+
+# Initialiseer de AI en toon een foutmelding als het misgaat
+llm = get_llm()
 if not llm:
     st.error("GROQ API sleutel niet gevonden. Zorg dat je deze hebt ingesteld in de Streamlit Cloud secrets.")
     st.stop()
 
-# --- Tabbladen voor de Twee Hoofdfuncties ---
+# --- Tabbladen ---
 tab1, tab2 = st.tabs(["✉️ **Brief Laten Uitleggen**", "✍️ **Help Mij Schrijven**"])
 
-# --- Tab 1: Brief Uitleggen (Jouw bestaande code)  ---
+
+# --- Tab 1: Brief Uitleggen ---
 with tab1:
     st.header("Laat je brief uitleggen")
     st.write("Plak de tekst van een moeilijke brief hieronder, of maak een foto van je brief.")
@@ -75,21 +91,13 @@ with tab1:
     agreed_tab1 = st.checkbox("Ik begrijp dat mijn brief anoniem verwerkt wordt en ga akkoord.", key="agree_tab1")
 
     if agreed_tab1:
-        # Definieer de RAG-keten specifiek voor de uitleg-tab
-        prompt_uitleg = PromptTemplate.from_template("""
-        Je bent een AI-assistent die laaggeletterde mensen in Nederland helpt met het begrijpen van moeilijke brieven. Gebruik de volgende stukken opgehaalde context om de vraag van de gebruiker te beantwoorden.
-        - Antwoord altijd in het Nederlands. Gebruik extreem simpele taal (B1-niveau of lager) en korte zinnen.
-        - Focus op: Wie heeft de brief gestuurd? Wat moet de persoon DOEN? Staat er een bedrag of datum in?
-        CONTEXT: {context}
-        VRAAG: {question}
-        HELPENDE ANTWOORD IN SIMPELE TAAL:
-        """)
-        question_answer_chain = create_stuff_documents_chain(llm, prompt_uitleg)
-        rag_chain = create_retrieval_chain(retriever_from_llm, question_answer_chain)
+        # Bouw de RAG-keten specifiek voor deze tab
+        vectorstore = load_vector_db()
+        retriever = MultiQueryRetriever.from_llm(retriever=vectorstore.as_retriever(), llm=llm)
+        combine_docs_chain = create_stuff_documents_chain(llm, PROMPT_UITLEG)
+        rag_chain = create_retrieval_chain(retriever, combine_docs_chain)
 
-        if 'text_from_ocr' not in st.session_state:
-            st.session_state.text_from_ocr = ""
-        
+        # UI elementen
         col1, col2 = st.columns(2)
         with col1:
             st.subheader("Optie 1: Maak een foto")
@@ -98,30 +106,40 @@ with tab1:
                 with st.spinner('Bezig met het lezen van de foto...'):
                     image = Image.open(uploaded_file)
                     text = pytesseract.image_to_string(image, lang='nld')
-                    st.session_state.text_from_ocr = text
+                    st.session_state.text_from_ocr = text # Gebruik session_state om tekst te bewaren
                     st.success("Tekst uit foto gehaald!")
         
         with col2:
             st.subheader("Optie 2: Plak de tekst")
-            user_input = st.text_area("Tekst van de brief:", value=st.session_state.text_from_ocr, height=300, key="input_tab1")
+            user_input = st.text_area("Tekst van de brief:", value=st.session_state.get('text_from_ocr', ''), height=300, key="input_tab1")
 
         if st.button("Leg de brief uit", type="primary", key="button_tab1"):
-            final_input = user_input or st.session_state.text_from_ocr
-            if final_input:
+            if user_input:
                 with st.spinner("Ik lees de brief en maak een simpele samenvatting..."):
-                    full_question = f"Vat de belangrijkste punten van deze brief samen: '{final_input}'"
-                    response = rag_chain.invoke({"question": full_question})
-                    answer = response['answer']
+                    full_question = f"Vat de belangrijkste punten van deze brief samen: '{user_input}'"
+                    try:
+                        response = rag_chain.invoke({"question": full_question})
+                        
+                        # Veilige controle of het antwoord bestaat
+                        if response and 'answer' in response and response['answer']:
+                            answer = response['answer']
+                            st.subheader("Simpele Uitleg:")
+                            st.markdown(f"<div style='border-left: 5px solid #007bff; padding: 10px; background-color: #f0f2f6; border-radius: 5px;'>{answer}</div>", unsafe_allow_html=True)
+                            
+                            st.subheader("Lees de uitleg voor:")
+                            tts = gTTS(text=answer, lang='nl', slow=False)
+                            tts.save("uitleg.mp3")
+                            st.audio("uitleg.mp3")
+                        else:
+                            st.error("Het is niet gelukt om een duidelijke samenvatting te maken. Dit kan gebeuren als de tekst geen duidelijke brief is. Probeer het opnieuw.")
                     
-                    st.subheader("Simpele Uitleg:")
-                    st.markdown(f"<div style='border-left: 5px solid #007bff; padding: 10px; background-color: #f0f2f6; border-radius: 5px;'>{answer}</div>", unsafe_allow_html=True)
-                    
-                    st.subheader("Lees de uitleg voor:")
-                    tts = gTTS(text=answer, lang='nl', slow=False)
-                    tts.save("uitleg.mp3")
-                    st.audio("uitleg.mp3")
+                    except Exception as e:
+                        st.error(f"Er is een onverwachte technische fout opgetreden. Probeer het later opnieuw. Details: {e}")
+            else:
+                st.warning("Plak eerst tekst of upload een foto van een brief.")
 
-# --- Tab 2: Schrijfhulp (Nieuwe Functionaliteit) ---
+
+# --- Tab 2: Schrijfhulp ---
 with tab2:
     st.header("Maak een professionele brief in simpele stappen")
     st.write("Kies welk soort brief je wilt sturen en vul de details in. De AI schrijft dan een voorbeeld voor je.")
@@ -129,11 +147,8 @@ with tab2:
     brief_type = st.selectbox(
         "**Stap 1: Kies wat voor soort brief je wilt schrijven**",
         [
-            "--- Kies een optie ---",
-            "Vraag om uitstel van betaling",
-            "Bezwaar maken tegen een boete of beslissing",
-            "Een afspraak afzeggen of verzetten",
-            "Een abonnement of contract opzeggen"
+            "--- Kies een optie ---", "Vraag om uitstel van betaling", "Bezwaar maken tegen een boete of beslissing",
+            "Een afspraak afzeggen of verzetten", "Een abonnement of contract opzeggen"
         ],
         key="brief_type_select"
     )
@@ -141,32 +156,26 @@ with tab2:
     if brief_type != "--- Kies een optie ---":
         st.write("---")
         st.subheader("**Stap 2: Vul de details in**")
-        ontvanger = st.text_input("Aan wie is de brief? (Naam van het bedrijf of de persoon)", key="ontvanger_input")
-        kenmerk = st.text_input("Wat is het kenmerk, factuurnummer of klantnummer? (Dit staat meestal bovenaan de brief die je hebt gekregen)", key="kenmerk_input")
+        ontvanger = st.text_input("Aan wie is de brief? (Naam bedrijf of persoon)", key="ontvanger_input")
+        kenmerk = st.text_input("Wat is het kenmerk, factuurnummer of klantnummer?", key="kenmerk_input")
         
-        extra_info = ""
-        if "uitstel" in brief_type:
-            extra_info = st.text_area("Waarom vraag je uitstel en wanneer kun je wel betalen? (Schrijf dit in je eigen woorden)", key="uitstel_info")
-        elif "Bezwaar" in brief_type:
-            extra_info = st.text_area("Waarom ben je het niet eens met de boete of beslissing? (Schrijf dit in je eigen woorden)", key="bezwaar_info")
-        elif "afspraak" in brief_type:
-            extra_info = st.text_area("Over welke afspraak gaat het (datum en tijd)? En wanneer zou je eventueel een nieuwe afspraak willen?", key="afspraak_info")
-        elif "abonnement" in brief_type:
-            extra_info = st.text_area("Per wanneer wil je opzeggen? (Optioneel)", key="opzeg_info")
+        extra_info_prompt = ""
+        # Dynamische prompts voor extra info
+        if "uitstel" in brief_type: extra_info_prompt = "Waarom vraag je uitstel en wanneer kun je wel betalen? (Schrijf dit in je eigen woorden)"
+        elif "Bezwaar" in brief_type: extra_info_prompt = "Waarom ben je het niet eens met de boete of beslissing? (Schrijf dit in je eigen woorden)"
+        elif "afspraak" in brief_type: extra_info_prompt = "Over welke afspraak gaat het (datum en tijd)? En wanneer zou je eventueel een nieuwe afspraak willen?"
+        elif "abonnement" in brief_type: extra_info_prompt = "Per wanneer wil je opzeggen? (Optioneel)"
+        extra_info = st.text_area(extra_info_prompt, key=f"extra_info_{brief_type}")
 
         st.write("---")
         st.subheader("**Stap 3: Maak de brief**")
         if st.button("Schrijf mijn voorbeeldbrief", type="primary", key="button_tab2"):
             if ontvanger and kenmerk:
-                # We gebruiken hier de 'llm' direct, zonder de RAG-keten
                 schrijf_prompt_template = f"""
                 Schrijf een korte, beleefde en formele Nederlandse brief namens een persoon. Gebruik simpele en duidelijke taal (B1-niveau).
-                Het doel van de brief is: '{brief_type}'.
-                De brief is gericht aan: {ontvanger}.
-                Het relevante kenmerk/nummer is: {kenmerk}.
-                Aanvullende informatie van de gebruiker: '{extra_info}'.
-
-                Zorg voor een correcte aanhef (bijv. 'Geachte heer/mevrouw,'), een duidelijke kernboodschap en een formele afsluiting (bijv. 'Met vriendelijke groet,') met ruimte voor een naam en handtekening. Houd het kort, helder en professioneel.
+                Het doel van de brief is: '{brief_type}'. De brief is gericht aan: {ontvanger}.
+                Het relevante kenmerk/nummer is: {kenmerk}. Aanvullende informatie van de gebruiker: '{extra_info}'.
+                Zorg voor een correcte aanhef, een duidelijke kernboodschap en een formele afsluiting met ruimte voor een naam en handtekening. Houd het kort en krachtig.
                 """
                 
                 with st.spinner("Ik schrijf een voorbeeldbrief voor je..."):
@@ -179,7 +188,8 @@ with tab2:
             else:
                 st.warning("Vul alsjeblieft de naam van de ontvanger en het kenmerk in.")
 
-# Privacyverklaring onderaan, buiten de tabs
+
+# --- Privacyverklaring onderaan ---
 st.markdown("---")
 with st.expander("Privacy en Veiligheid (Lees dit)"):
     st.write("""
