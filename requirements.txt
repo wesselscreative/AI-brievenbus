@@ -10,3 +10,5 @@ Pillow
 gTTS
 langchain-groq
 sentence-transformers
+pandas
+PyMuPDF
