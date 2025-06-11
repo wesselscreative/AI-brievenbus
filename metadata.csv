@@ -1,0 +1,298 @@
+bestandsnaam,bron,onderwerp,document_type,trefwoorden,a2_samenvatting
+cjib_verkeersboete_24.txt,CJIB,Verkeersboete,Boete,"boete,auto,te hard,betalen,foto","Here is a summary of the official letter in 2-4 simple, short sentences:
+
+""Dear Mr. El Ghazi,
+
+You must pay €289.00 because you broke a traffic rule. You must pay this amount by January 12, 2024. You can pay online or use the enclosed acceptance form.
+
+Best regards,
+The Central Justice Collection Agency""
+
+I focused on the most important action, which is the payment of €289.00, and removed all unnecessary information. I used simple language and short sentences to make it easy to understand for a low-literate reader."
+woningcorporatie_huurachterstand_28.txt,Woningcorporatie,Huisvesting,Waarschuwing,"huur,niet betaald,huis,probleem,schuld,geld","Here is a summary of the letter in 2-4 simple sentences:
+
+Dear Mr. Janssen,
+
+You owe € 712.50 in rent for November 2023. We need you to pay this amount within 5 working days. If you don't pay, we will have to send the bill to a debt collector, which can lead to big problems. Can you call us on 088-767 82 25 if you have trouble paying?"
+ziekenhuis_afspraakbevestiging_13.txt,Ziekenhuis,Zorg,Uitnodiging,"afspraak,dokter,ziekenhuis,moet komen,datum","Hier is een samenvatting van de brief in 2 tot 4 simpele zinnen:
+
+""Heer Simons,
+
+U heeft een afspraak op de polikliniek Cardiologie op 4 december 2023 om 14:15 uur. Kom alstublieft mee met uw identiteitsbewijs, verzekeringspas en een lijst van uw medicijnen.
+
+Als u niet kunt komen, bel ons dan zo snel mogelijk, uiterlijk 24 uur van tevoren.
+
+Met vriendelijke groet,
+Patiëntenplanning AMC"""
+irrelevant_folder_supermarkt_49.txt,Albert Heijn,Overig,Reclame,"boodschappen,bonus,aanbieding,folder","Hier is een samenvatting van de brief in 2 simpele zinnen:
+
+""Albert Heijn biedt verschillende promoties tot en met 17 december. Je kunt bijvoorbeeld mandarijnen voor 1.99 euro en verse pizza's voor de helft van de prijs krijgen."""
+vve_uitnodiging_vergadering_48.txt,VvE Beheer,Huisvesting,Uitnodiging,"vve,vergadering,afspraak,bijeenkomst,servicekosten,praten,gebouw","Here is a summary of the official letter in 2-4 short and simple sentences:
+
+""Uitnodiging voor de jaarlijkse Algemene Ledenvergadering van VvE ""De Hoogvliet"". Deze vergadering vindt plaats op woensdag 24 januari 2024 om 19:30 uur in het Buurthuis 'De Ontmoeting' in Rotterdam. Kom mee beslissen over het gebouw. Download de stukken via het online VvE-portaal en stem mee!"""
+notaris_uitnodiging_bespreking_erfenis_47.txt,Notaris,Familie & Erfenis,Uitnodiging,"erfenis,overleden,notaris,praten,testament,geld,erven","Hier is een A2-samenvatting van de brief in 2 tot 4 simpele zinnen:
+
+Er is een man overleden genaamd A. Smit. U bent zijn erfgenaam volgens zijn testament. We nodigen u uit om met ons te praten over zijn nalatenschap. We laten u weten wat er gebeurt en welke stappen er genomen moeten worden."
+zorgverzekeraar_machtiging_aanvraag_44.txt,Menzis,Zorg,Beslissing,"fysiotherapie,toestemming,goedkeuring,eigen risico,zorgverzekering","Hier is een samenvatting van de brief in 2 zeer simpele, korte zinnen:
+
+""Mevrouw De Groot, u heeft toestemming gekregen voor 20 behandelingen fysiotherapie van 1 januari 2024 tot 31 december 2024. U betaalt de eerste € 385 zelf, omdat het onder uw eigen risico valt."""
+bank_stornering_incasso_40.txt,Rabobank,Geld & Bankzaken,Informatiebrief,"niet betaald,mislukt,automatische incasso,rood staan,geen geld","Hier is een simpele en directe samenvatting van de brief:
+
+""Rabobank hield een automatische incasso van € 152,75 uit uw rekening op 4 december 2023, maar dat ging niet door omdat er niet genoeg geld op uw rekening was. U moet contact maken met CZ Zorgverzekeraar om de betaling alsnog te doen."""
+bank_negatief_saldo_39.txt,ING,Geld & Bankzaken,Waarschuwing,"rood staan,min,schuld,bankrekening,rente betalen,geld","Here is a summary of the letter in 2-4 simple sentences:
+
+Dear Mr. De Vries,
+
+Your ING account (NLXXINGB0123456789) has a negative balance of € -155,40. You need to fill this balance as soon as possible to avoid paying interest. You can do this by adding money to your account or applying for a credit limit through the ING app or Mijn ING.
+
+Best regards,
+ING Customer Service"
+juridisch_loket_afspraakbevestiging_38.txt,Juridisch Loket,Juridische Hulp,Bevestiging,"afspraak,jurist,advocaat,hulp,probleem,huur,praten","Here is a simplified summary of the official letter in 2-4 short sentences:
+
+""U heeft een afspraak met ons Juridisch Loket over uw huurcontract. Wij bevestigen dat u op 19 december 2023 om 15:30 uur bij ons in Rotterdam komt praten met een van onze juristen. Neem alstublieft uw huurcontract en brieven van uw verhuurder mee. Laat ons minimaal 24 uur van tevoren weten als u niet kunt komen."""
+svb_aankondiging_aow_37.txt,SVB,Pensioen & AOW,Informatiebrief,"aow,pensioen,ouderdom,geld,aanvragen,leeftijd","Here is a simple and clear summary of the letter in 2-4 sentences:
+
+Dear Mr. Bakker,
+
+You will soon reach your AOW pension age. You will then receive a pension from the government. Your AOW pension will start on May 15, 2024. Keep an eye on your mail for a request form about 4 months before then.
+
+Best regards,
+Social Insurance Bank"
+svb_toekenning_kinderbijslag_36.txt,SVB,Gezin & Kind,Toekenning,"kinderbijslag,kind,geld,krijgen,svb,geboorte","Hier is een samenvatting van de brief op A2-taalniveau:
+
+""Mevrouw L. de Jong,
+
+U ontvangt kinderbijslag voor uw kind Anna. Wij hebben uw aanvraag goedkeurd. U krijgt het geld elk kwartaal, beginnend vanaf januari 2024. Als iets verandert in uw gezin, meld dit ons direct aan via ""Mijn SVB"".
+
+Met vriendelijke groet,
+SVB"""
+gemeente_uitnodiging_schuldhulpverlening_35.txt,Gemeente Rotterdam,Schulden,Uitnodiging,"schulden,hulp,afspraak,praten,geldproblemen,gemeente","Hier is een samenvatting van de brief in 2 zinnen:
+
+U bent uitgenodigd voor een gesprek om uw financiële situatie te bespreken en te helpen verbeteren. Het gesprek is op 21 december 2023 om 11:00 uur op locatie Kredietbank Rotterdam, Goudsesingel 50."
+gemeente_beslissing_wmo_34.txt,Gemeente Groningen,Zorg & Ondersteuning,Beslissing,"wmo,hulp in huis,huishoudelijke hulp,gemeente,goedkeuring,cak","Hier is de samenvatting in 2 zeer simpele, korte zinnen:
+
+Uw aanvraag voor huishoudelijke hulp is goedgekeurd. U heeft recht op 2 uur hulp per week van 'Thuiszorg Noord' en betaalt een eigen bijdrage voor deze voorziening."
+uwv_beslissing_sanctie_33.txt,UWV,Werk & Inkomen,Sanctie,"straf,korting,uitkering,niet gekomen,afspraak gemist,maatregel","Here is a summary of the official letter in 2-4 simple, short sentences:
+
+UWV schrijft u omdat u een afspraak miste met uw werkcoach. Hierdoor krijgt u uw WW-uitkering 1 maand lang met 25% minder. Als u dit niet goed vindt, kunt u binnen 6 weken klagen."
+belastingdienst_verzoek_informatie_32.txt,Belastingdienst,Belastingen,Verzoek,"informatie sturen,papieren,bewijs,zorgkosten,aangifte,vragen","Here is a simple summary of the official letter in 2-4 short sentences:
+
+Dear Mr. Jansen,
+
+We need more information from you to check your 2022 tax return. We want to see proof of the special care costs you claimed, such as receipts or invoices. You can send these documents by email or by post to the address above. Please do this within 4 weeks.
+
+Best regards,
+The Tax Inspector"
+belastingdienst_terugvordering_toeslagen_31.txt,Belastingdienst,Toeslagen,Terugvordering,"terugbetalen,schuld,toeslagen,teveel gekregen,zorgtoeslag,geld","Hier is een samenvatting van de brief in 2 tot 4 zeer simpele, korte zinnen:
+
+""Het Belastingkantoor zegt dat u te veel zorgtoeslag heeft gekregen in 2022. U hebt € 400,00 te veel ontvangen. U moet dit bedrag binnen 6 weken terugbetalen. U kunt dit doen door geld over te maken of een betalingsregeling te maken."""
+waterbedrijf_jaarafrekening_41.txt,Vitens,Wonen & Energie,Jaarafrekening,"water,rekening,jaarrekening,geld terug,bijbetalen,verbruik","Here is a simplified summary of the letter in 3 short sentences:
+
+Dear Mrs. Pietersen,
+
+You received a bill for your water usage in 2023. You have already paid €216,00, so you will get €5,50 back. Your new water bill will be €18,50 per month starting next month.
+
+Best regards,
+Vitens Customer Service"
+school_melding_verzuim_42.txt,ROC van Amsterdam,Onderwijs & Kind,Waarschuwing,"spijbelen,niet op school,verzuim,leerplicht,praten,mentor,probleem","Hier is een samenvatting van de brief in 2 simpele zinnen:
+
+""Onze school heeft gezien dat uw zoon P. de Graaf de afgelopen 4 weken veel school heeft gemist zonder een goede reden. We vinden dit ongeoorloofd en willen graag met u praten om deze situatie op te lossen."""
+woningcorporatie_aankondiging_onderhoud_43.txt,De Alliantie,Huisvesting,Informatiebrief,"onderhoud,verbouwing,schilder,kozijnen,klussen,huis","Hier is een samenvatting van de brief in 2 simpele zinnen:
+
+""Wij zullen aan de buitenkant van uw woning onderhoud uitvoeren op 9 december 2023. Wij zullen schilderwerk doen en eventuele houtrot herstellen, en dat duurt 2 weken vanaf 15 januari 2024."""
+energieleverancier_wijziging_tarieven_45.txt,Eneco,Wonen & Energie,Informatiebrief,"energie,stroom,gas,prijs,tarieven,duurder,rekening","Here is a simple summary of the letter in 2-4 sentences:
+
+Dear Mr. Ali,
+
+From January 1, 2024, Eneco will change its energy prices. This is because of changes on the energy market and changes in energy taxes. Your new prices are: €0.35 per kWh for electricity (normal rate), €0.32 per kWh for electricity (daily rate), and €1.30 per m3 for gas. Your monthly bill will remain €195.00, but you can adjust it yourself through Mijn Eneco.
+
+Best regards,
+Eneco Customer Service"
+cjib_aanmaning_verkeersboete_46.txt,CJIB,Verkeersboete,Aanmaning,"boete,verhoging,niet betaald,herinnering,extra kosten,auto","Hier is een samenvatting van de brief op A2-taalniveau:
+
+""Geachte heer El Ghazi,
+
+U hebt een strafboete niet betaald. U moet nu € 433,50 betalen voor een verkeersovertreding. Dit moet uiterlijk op 19 januari 2024 gebeuren.
+
+Betaal direct om extra kosten en problemen te voorkomen.
+
+Met vriendelijke groet,
+CJIB"""
+irrelevant_nieuwsbrief_buurthuis_50.txt,Buurtcentrum,Overig,Nieuwsbrief,"buurthuis,activiteiten,bingo,knutselen,vrijwilligers,feestdagen","Hier is een samenvatting van de brief in 2 simpele zinnen:
+
+We hebben leuke activiteiten gepland voor de feestdagen, zoals kerstbingo voor ouderen en een kinderknutselmiddag. Kom ook naar de Nieuwjaarsborrel op 5 januari en proosten we samen op het nieuwe jaar!"
+irrelevant_recept_website_51.txt,Smulweb,Overig,Recept,"koken,eten,recept,appeltaart,bakken,ingrediënten","Hier is de samenvatting in 2 simpele zinnen:
+
+Maak een lekkere appeltaart door boter, suiker en eigeel te mengen met bakmeel. Gooi het mengsel in een springvorm, vul met appelmengsel en bak in de oven tot de taart goudbruin is."
+zorginstanties_uitnodiging_intakegesprek_jeugdzorg_52.txt,Jeugdbescherming,Gezin & Kind,Uitnodiging,"jeugdzorg,veilig thuis,zorgen,kind,praten,afspraak,hulp","Hier is een samenvatting van de brief in 2 tot 4 simpele zinnen:
+
+Er zijn zorgen over de ontwikkeling en veiligheid van uw kind, L. Pieters. Wij nodigen u uit voor een gesprek om samen te kijken hoe we de situatie kunnen verbeteren. Het gesprek zal plaatsvinden op 28 december 2023 om 10:00 uur op ons kantoor aan de Zuidwal 50."
+ziekenhuis_informatie_operatie_voorbereiding_53.txt,Medisch Centrum Leeuwarden,Zorg,Informatiebrief,"operatie,ziekenhuis,voorbereiden,nuchter,medicijnen,narcose","Here is a summary of the official letter in 2-4 simple sentences:
+
+Dear Mr. De Haan,
+
+You will soon have an operation. Before the operation, you need to prepare. You will have an appointment at the pre-operative clinic where you will talk to an anesthesiologist about the anesthesia. You need to be careful with your medicine and do not eat or drink anything before the operation.
+
+Best regards,
+Opnamebureau MCL"
+belastingdienst_betalingsherinnering_03.txt,Belastingdienst,Belastingen,Herinnering,"betalen,herinnering,auto,motorrijtuigenbelasting,te laat","Hier is een samenvatting van de brief op A2-taalniveau:
+
+""Belastingdienst schrijft u om € 88 te betalen voor motorrijtuigenbelasting. De uiterste betaaldatum was 10 november 2023. Betaalt u niet op tijd, ontvangt u een aanmaning en moet u € 49 betalen."
+belastingdienst_beschikking_zorgtoeslag_02.txt,Belastingdienst,Toeslagen,Toekenning,"zorgtoeslag,geld krijgen,maandelijks,voorschot,inkomen","Hier is een samenvatting van de brief in 2 tot 4 eenvoudige zinnen:
+
+U ontvangt in 2024 zorgtoeslag van € 1.488. U krijgt een voorschot van € 124 per maand. Het eerste bedrag wordt op 20 december 2023 gestort op uw rekening. Als uw inkomen of situatie verandert, geef dit dan direct door aan de Belastingdienst."
+belastingdienst_beschikking_huurtoeslag_afwijzing_04.txt,Belastingdienst,Toeslagen,Afwijzing,"huurtoeslag,afgewezen,nee,geen recht,huur te hoog","HIER IS DE SAMENVATTING:
+
+Mevrouw De Wit, u heeft huurtoeslag aangevraagd voor 2023. Wij hebben uw aanvraag bekeken. U heeft geen recht op huurtoeslag omdat uw huur te hoog is. U kunt bezwaar maken tegen deze beslissing binnen 6 weken.
+
+(Begrijpelijkheid score: 9/10)"
+belastingdienst_aanslag_inkomstenbelasting_01.txt,Belastingdienst,Belastingen,Aanslag,"inkomstenbelasting,geld terug,belastingaangifte,berekening","Hier is een simpele samenvatting van de brief:
+
+""U ontvangt een brief van de Belastingdienst over uw inkomstenbelasting voor 2022. U ontvangt € 150 terug omdat u al te veel belasting hebt betaald. Dit bedrag zal binnen 2 weken op uw bankrekening worden gestort."""
+mijnoverheid_notificatie_20.txt,MijnOverheid,Digitale Post,Notificatie,"berichtenbox,inloggen,digid,nieuw bericht,gemeente","Hier is een simpele en korte samenvatting van de brief op A2-taalniveau:
+
+""Er is een nieuw bericht voor u klaar in uw Berichtenbox op MijnOverheid. Het bericht is van Gemeente Amsterdam en gaat over de aanslag gemeentelijke heffingen 2024. Log in op mijn.overheid.nl om het bericht te lezen."""
+digid_activatiecode_brief_21.txt,DigiD,Digitale Post,Instructie,"digid,activeren,code,wachtwoord,inloggen","Hier is een samenvatting van de brief op A2-taalniveau:
+
+Dear Mr. Nguyen,
+
+U ontvangt deze brief omdat u een DigiD hebt aangevraagd. Om uw DigiD te gebruiken, moet u deze eerst activeren. Uw activatiecode is: ABC-123-XYZ.
+
+Ga naar www.digid.nl/activeren, log in met uw gebruikersnaam en wachtwoord, en voer de code in.
+
+Met vriendelijke groet,
+DigiD"
+mijnoverheid_notificatie_uwv_22.txt,MijnOverheid,Digitale Post,Notificatie,"berichtenbox,inloggen,digid,nieuw bericht,uwv,uitkering","Hier is een samenvatting van de brief in 2 tot 4 zeer simpele, korte zinnen:
+
+Er is een nieuw bericht voor u in uw Berichtenbox op MijnOverheid.
+Het bericht is over uw uitkering en kwam van UWV.
+Log in op mijn.overheid.nl met uw DigiD om het bericht te lezen."
+duo_start_aflossen_25.txt,DUO,Studieschuld,Informatiebrief,"studieschuld,terugbetalen,duo,starten,lening,maandbedrag","Here is a summary of the official letter in 2-4 simple sentences:
+
+Dear Mrs. Zandstra,
+
+You need to pay back your student loan. Your repayment period starts on January 1, 2025. You don't need to pay anything back until then, but you can pay voluntarily. After January 1, 2025, you will receive a monthly payment of €68.45, which will be automatically deducted on the 28th of each month.
+
+Best regards,
+DUO"
+duo_betalingsachterstand_26.txt,DUO,Studieschuld,Aanmaning,"niet betaald,achterstand,duo,schuld,incasso,probleem","Hier is een samenvatting van de brief in 2 zeer simpele zinnen:
+
+Heer De Graaf, u heeft een achterstallig bedrag van € 104,50 voor uw studieschuld. Wij vragen u om dit bedrag direct over te maken op onze rekening om de achterstallige maandbedragen te betalen."
+energieleverancier_jaarafrekening_29.txt,Vattenfall,Wonen & Energie,Jaarafrekening,"energie,jaarrekening,bijbetalen,stroom,gas,verbruik","Here is a simplified version of the text in 2-4 sentences:
+
+Dear customer,
+
+We have sent you your annual energy bill for the period from November 2022 to October 2023. You used 2510 kWh of electricity and 1150 m3 of gas. You need to pay € 170.70. This amount will be automatically deducted from your account in 14 days.
+
+Best regards,
+Vattenfall Customer Service"
+energieleverancier_waarschuwing_afsluiting_30.txt,Eneco,Wonen & Energie,Waarschuwing,"afsluiten,niet betaald,laatste kans,stroom af,schuld","Hier is een samenvatting van de brief in 2 tot 4 zeer simpele, korte zinnen:
+
+""Geachte heer Ali,
+
+U heeft € 385,40 aan Eneco niet betaald. Dit is uw laatste kans om afsluiting van de energielevering te voorkomen. Betaal het bedrag uiterlijk op 23 november 2023, anders worden de levering van stroom en gas op uw adres afgesloten.
+
+Met vriendelijke groet,
+Eneco Debiteurenbeheer""
+
+Ik heb geprobeerd de belangrijkste informatie te halen en deze in eenvoudige taal te vertalen, zodat het voor laaggeletterden begrijpelijk is."
+gemeente_toekenning_bijstand_09.txt,Gemeente Groningen,Werk & Inkomen,Toekenning,"bijstand,uitkering,geld krijgen,gemeente,participatiewet","Hier is een samenvatting van de brief op A2-taalniveau:
+
+""Heer Koster,
+
+U ontvangt vanaf 1 november 2023 een bijstandsuitkering van € 1.150,45 per maand. Dit is de norm voor een alleenstaande.
+
+U moet maandelijks naar werk zoeken en alle informatie over uw uitkering aan ons doorgeven.
+
+Met vriendelijke groet,
+Afdeling Sociale Zaken en Werk""
+
+Ik heb geprobeerd om de belangrijkste informatie te selecteren en in eenvoudige zinnen te presenteren, zodat het voor laaggeletterden begrijpelijk is."
+gemeente_toekenning_energietoeslag_10.txt,Gemeente Utrecht,Wonen & Energie,Toekenning,"energietoeslag,geld,gemeente,energie,hulp,automatisch","Here is a summary of the official letter in 2-4 simple and short sentences, targeted at a low-literate audience:
+
+""Dear Mrs. Hassan,
+
+You will receive an energy subsidy of € 800 for 2023 because you receive benefits. You don't need to ask for it, we will send it to you automatically. The money will be transferred to your account within 5 working days.
+
+Best regards,
+The City Council of Utrecht"""
+gemeente_afwijzing_bijzondere_bijstand_11.txt,Gemeente Rotterdam,Financiële Hulp,Afwijzing,"bijzondere bijstand,afgewezen,geen geld,laptop,gemeente","Hier is de samenvatting in 2 tot 4 zeer simpele, korte zinnen:
+
+De gemeente Rotterdam heeft uw aanvraag voor bijzondere bijstand voor een nieuwe laptop afgewezen. Dit omdat een laptop een algemene noodzakelijke kosten is, die iedereen heeft. U wordt aangeraden om deze kosten zelf te betalen of een lening af te sluiten."
+gemeente_kwijtschelding_belasting_12.txt,Gemeentebelastingen,Belastingen,Beslissing,"kwijtschelding,niet betalen,gemeente,belasting,afval","Here is a summary of the official letter in 2-4 simple sentences:
+
+Dear Mrs. Polat,
+
+We have considered your request to not pay your municipal taxes. We have decided to fully cancel your waste and sewer fees for 2023. You don't need to pay these amounts. We will refund any amount you have already paid within 4 weeks.
+
+Best regards,
+The Tax Collector of Gemeentebelastingen Den Haag"
+incassobureau_aanmaning_23.txt,Intrum Justitia,Schulden,Aanmaning,"incasso,schuld,rekening,betalen,deurwaarder,laatste kans","Here is a summary of the official letter in 2-4 simple and short sentences, focusing on the main action or message:
+
+U krijgt een laatste aanmaning om € 136,75 te betalen.
+Dit bedrag is aan u verschuldigd voor een factuur van Wehkamp B.V. (F2023-1234).
+Betaal dit bedrag binnen 7 dagen op rekeningnummer NLXXINTR0123456789.
+Als u niet betaalt, zullen er verdere maatregelen worden genomen."
+uwv_toekenning_ww_uitkering_05.txt,UWV,Werk & Inkomen,Toekenning,"ww,uitkering,werkloos,geld krijgen,solliciteren,uwv","Hier is een samenvatting van de brief in 3 simpele zinnen:
+
+Heer Bouma,
+U heeft recht op een WW-uitkering van 14 maanden, beginnend vanaf 1 november 2023. De uitkering is gebaseerd op uw SV-loon."
+uwv_uitnodiging_gesprek_werkcoach_06.txt,UWV,Werk & Inkomen,Uitnodiging,"afspraak,werkcoach,praten,uwv,werk zoeken,verplicht","Hier is een samenvatting van de brief op A2-taalniveau:
+
+""U bent uitgenodigd voor een gesprek met uw werkcoach. Het gesprek is op 27 november om 10:30 uur bij het UWV Werkplein in Tilburg. We bespreken uw zoektocht naar werk en hoe u snel weer werk kunt vinden. Het is belangrijk dat u komt, anders kan dit gevolgen hebben voor uw uitkering."""
+uwv_herinnering_inkomstenopgave_07.txt,UWV,Werk & Inkomen,Herinnering,"inkomsten,doorgeven,uwv,uitkering,vergeten,formulier","Hier is een samenvatting van de brief in 2 zeer simpele, korte zinnen:
+
+Heer Yilmaz,
+
+Geef uw inkomsten over oktober door via uwv.nl/werkmap, uiterlijk 10 november 2023. Als wij uw inkomstenopgave niet ontvangen, kunnen wij uw uitkering niet betalen."
+uwv_beslissing_wia_uitkering_08.txt,UWV,Ziekte & Arbeidsongeschiktheid,Beslissing,"wia,ziek,afgekeurd,arbeidsongeschikt,uitkering,wga","Hier is een samenvatting van de brief in 2 simpele zinnen:
+
+U bent ziek geweest en UWV heeft bekeken of u recht heeft op een WIA-uitkering. U heeft nu recht op een WGA-uitkering omdat u nog 55% van uw oude loon kan verdienen met passend werk."
+woningcorporatie_huurverhoging_27.txt,WoonStad Rotterdam,Huisvesting,Informatiebrief,"huur,verhoging,duurder,betalen,huurtoeslag,bezwaar","Hier is de samenvatting in 2 tot 4 simpele zinnen:
+
+Vanaf 1 juli 2024 wordt uw huurprijs verhoogd naar € 695,65. De huidige huurprijs is € 650,00 en wordt omhoog gegaan met 3,1%. Betaalt u via automatische incasso? Dan pasen wij het bedrag voor u aan."
+ziekenhuis_factuur_eigen_risico_14.txt,Erasmus MC,Zorgkosten,Informatiebrief,"eigen risico,betalen,ziekenhuis,rekening,zorgverzekeraar,kosten","Hier is een samenvatting van de brief op A2-taalniveau:
+
+""Beste mevrouw De Bruin,
+
+U hebt op 5 september 2023 behandeld worden op Erasmus MC. De kosten voor deze behandeling zijn € 250. Uw zorgverzekeraar, Zilveren Kruis, betaalt een deel van deze kosten. U hoeft geen geld aan ons te betalen, maar via uw zorgverzekeraar.
+
+Met vriendelijke groet,
+Financiële Administratie Erasmus MC"""
+ziekenhuis_opnamebrief_15.txt,Isala Klinieken,Zorg,Instructie,"ziekenhuis,opname,operatie,voorbereiden,nuchter,meenemen","Hier is een samenvatting van de brief in 2 tot 4 simpele, korte zinnen:
+
+Heer Bakker,
+
+U wordt opgenomen in het ziekenhuis voor een knieoperatie op 21 november 2023. U moet niets eten of drinken vanaf 00:00 uur de nacht voor de operatie. Breng alleen belangrijke spullen mee, zoals kleding en medicijnen.
+
+Met vriendelijke groet,
+Opnamebureau Isala"
+zorgverzekeraar_polisblad_2024_16.txt,VGZ,Zorgverzekering,Polis,"zorgverzekering,polis,premie,kosten,pakket,verzekerd","Hier is een samenvatting van de brief in 2 simpele zinnen:
+
+""U ontvangt een nieuwe polisblad voor uw zorgverzekering in 2024. U bent verzekerd voor 2024 met een basisverzekering, een aanvullende verzekering en tandartsverzekering. U betaalt € 180,95 per maand."""
+zorgverzekeraar_betalingsherinnering_17.txt,CZ,Zorgverzekering,Herinnering,"niet betaald,rekening,herinnering,premie,betalen,schuld","Hier is de samenvatting in 2 tot 4 zeer simpele, korte zinnen:
+
+""Héer Singh,
+
+Je hebt nog € 152,75 te betalen voor je zorgverzekering voor oktober 2023. Betaal dit bedrag binnen 14 dagen op NLXXCZXX0123456789 met het factuurnummer 202310-12345.
+
+Als je al hebt betaald, doe niets. Als je niet in één keer kan betalen, neem dan contact met ons op.
+
+Met vriendelijke groet,
+CZ Debiteurenbeheer"""
+zorgverzekeraar_afrekening_eigen_risico_18.txt,Menzis,Zorgkosten,Overzicht,"eigen risico,zorgkosten,overzicht,rekening,betalen,verrekening","Here is a summary of the letter in 2-4 simple sentences:
+
+Dear Mrs. De Groot,
+
+We have sent you a bill for €150 for a doctor's visit you had at St. Antonius Ziekenhuis. We will subtract this from your remaining deductible. Your new deductible balance is €270. You don't need to pay anything now, but we will send you a bill for the deductible costs at the beginning of the next quarter.
+
+Best regards,
+Menzis"
+zorgverzekeraar_wijziging_betaalwijze_19.txt,Zilveren Kruis,Zorgverzekering,Bevestiging,"automatische incasso,betalen,bankrekening,wijziging,premie","Here is a simplified version of the letter in 2-4 short sentences:
+
+Dear Mr. De Jong,
+
+We confirm that you want to pay your monthly premium by automatic bank transfer. From now on, we will take the money from your account on the 28th of each month. The first payment will be made on November 28th for the December premium. You don't need to do anything else.
+
+Best regards,
+Klantenservice Zilveren Kruis"
