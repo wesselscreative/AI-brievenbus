@@ -12,3 +12,4 @@ langchain-groq
 sentence-transformers
 pandas
 PyMuPDF
+supabase
