@@ -111,10 +111,9 @@ PROMPT_UITLEG = PromptTemplate.from_template(
     
     Als de context WEL een officiële brief is, geef dan een simpele samenvatting (A2-niveau). Structureer je antwoord als volgt:
     1.  Een korte introductiezin.
-    2.  Gebruik bullet points (•) voor de belangrijkste punten.
-    3.  GEBRUIK DE VOLGENDE ICONEN VOOR DE BULLET POINTS:
+    2.  Maak voor ELK van de volgende punten een APART bullet point (•):
         - 🏢 **Van wie:** Voor de afzender van de brief.
-        - 🎯 **Wat moet u doen?:** Voor de belangrijkste actie die de gebruiker moet ondernemen.
+        - 🎯 **Wat moet u doen?:** Voor de belangrijkste actie die de gebruiker moet ondernemen.(Focus hierbij extra op deadlines zoals 'binnen 5 dagen').
         - 💰 **Bedrag:** Voor elk geldbedrag dat betaald moet worden of ontvangen wordt.
         - 🗓️ **Datum:** Voor elke belangrijke datum of deadline.
         - ℹ️ **Let op:** Voor overige belangrijke informatie.
