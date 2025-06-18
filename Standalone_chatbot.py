@@ -14,13 +14,13 @@ import pytesseract
 from gtts import gTTS
 from supabase import create_client, Client
 
-# --- NIEUWE IMPORTS VOOR DE ROBUUSTE CHAIN ---
-from langchain.chains import RetrievalQA
+# Imports voor de chains en geheugen
+from langchain.chains import ConversationChain
 from langchain.chains.llm import LLMChain
-from langchain.chains.combine_documents.stuff import StuffDocumentsChain
-# --- EINDE NIEUWE IMPORTS ---
+from langchain.memory import ConversationBufferMemory
 
 # --- Configuratie & Setup ---
+# ... (Dit deel blijft onveranderd) ...
 load_dotenv()
 groq_api_key = st.secrets.get("GROQ_API_KEY", os.getenv("GROQ_API_KEY"))
 supabase_url = st.secrets.get("SUPABASE_URL", os.getenv("SUPABASE_URL"))
@@ -33,13 +33,14 @@ METADATA_PATH = os.path.join(SCRIPT_DIR, "metadata.csv")
 LLM_MODEL_GROQ = "llama3-70b-8192"
 EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 
-# --- Supabase Initialisatie ---
 if supabase_url and supabase_key:
     supabase: Client = create_client(supabase_url, supabase_key)
 else:
     supabase = None
+# --- Einde Configuratie ---
 
-# --- Functies (onveranderd) ---
+
+# --- Functies ---
 def log_to_supabase(log_data):
     if not supabase: return
     try:
@@ -56,12 +57,10 @@ def load_and_process_data():
     except FileNotFoundError:
         st.error(f"Het bestand 'metadata.csv' is niet gevonden. De app kan niet starten.")
         st.stop()
-    
     all_docs = []
     if not os.path.exists(DATA_PATH):
         st.error(f"De map 'Data' is niet gevonden. De app kan niet starten.")
         st.stop()
-        
     for filename in os.listdir(DATA_PATH):
         filepath = os.path.join(DATA_PATH, filename)
         content = None
@@ -76,7 +75,6 @@ def load_and_process_data():
                     with open(filepath, 'r', encoding='cp1252') as f: content = f.read()
                 if content is not None: all_docs.append(Document(page_content=content, metadata={'source': filepath}))
         except Exception as e: st.warning(f"Kon bestand {filename} niet laden: {e}")
-    
     docs_to_index = []
     for doc in all_docs:
         base_name = os.path.basename(doc.metadata['source'])
@@ -92,21 +90,22 @@ def load_and_process_data():
     vectorstore = FAISS.from_documents(documents=docs_to_index, embedding=embeddings)
     return vectorstore
 
-# --- De Volledige Prompt ---
-PROMPT_UITLEG = PromptTemplate.from_template(
-    """Je bent een empathische en zeer nauwkeurige AI-assistent die laaggeletterde mensen helpt. Je taak is om de onderstaande officiële brief te analyseren en in perfect A2-taalgebruik uit te leggen.
+# --- Prompts ---
+PROMPT_UITLEG = PromptTemplate(
+    input_variables=["context", "question"],
+    template="""Je bent een empathische en zeer nauwkeurige AI-assistent die laaggeletterde mensen helpt. Je taak is om de onderstaande officiële brief te analyseren en in perfect, correct Nederlands (A2-niveau) uit te leggen.
 
 STAP 1: ANALYSEER DE TOON
-Lees eerst de hele brief en bepaal of het goed, slecht, zeer ernstig of neutraal nieuws is.
+Lees de hele brief en bepaal of het goed, slecht, zeer ernstig of neutraal nieuws is.
 
 STAP 2: SCHRIJF JE ANTWOORD
-Structureer je antwoord als volgt:
+Structureer je antwoord als volgt. Zorg ervoor dat elke zin grammaticaal correct is.
 
-1.  **Introductiezin:** Begin met een zin die past bij de toon die je in Stap 1 hebt bepaald.
-    - Bij goed nieuws: "Goed nieuws! In deze brief staat dat u..."
-    - Bij slecht nieuws: "Dit is een belangrijke brief van [organisatie]. Hierin staat dat u..."
-    - Bij zeer ernstig nieuws: "Let op, dit is een zeer dringende brief. Het is belangrijk dat u direct actie onderneemt. In de brief staat dat..."
-    - Bij neutraal nieuws: "Dit is een brief met informatie over uw..."
+1.  **Introductiezin:** Kies de introductie die past bij jouw analyse en vul deze aan tot een volledige, correcte zin.
+    - Bij goed nieuws, gebruik dit sjabloon: "Goed nieuws! In deze brief staat dat u [JOUW ANALYSE HIER]."
+    - Bij slecht nieuws, gebruik dit sjabloon: "Dit is een belangrijke brief van [organisatie]. Hierin staat dat u [JOUW ANALYSE HIER]."
+    - Bij zeer ernstig nieuws, gebruik dit sjabloon: "Let op, dit is een zeer dringende brief. In de brief staat dat [JOUW ANALYSE HIER]."
+    - Bij neutraal nieuws, gebruik dit sjabloon: "Dit is een brief met informatie over uw [JOUW ANALYSE HIER]."
 
 2.  **Bullet Points:** Geef de details in een lijst. Elke bullet point MOET op een nieuwe regel beginnen met `* ` en het juiste icoon.
     * 🏢 **Van wie:** Noem de volledige naam van de afzender.
@@ -123,19 +122,46 @@ ANALYSEER DE VOLGENDE CONTEXT (VOLLEDIGE TEKST VAN DE BRIEF):
 VRAAG (NEGEER DEZE, FOCUS OP DE CONTEXT):
 {question}
 
-HELPENDE ANTWOORD:
-"""
+HELPENDE ANTWOORD:"""
 )
 
-# --- Callback Functies (onveranderd) ---
+PROMPT_CHAT = PromptTemplate.from_template(
+    """Je bent een behulpzame AI-assistent. De gebruiker heeft een moeilijke brief laten samenvatten.
+De volledige, originele tekst van de brief was:
+---
+{original_brief}
+---
+Jouw eerdere samenvatting was:
+---
+{summary}
+---
+De huidige conversatie is:
+{history}
+
+Beantwoord nu de nieuwe vraag van de gebruiker op een simpele en duidelijke (A2-niveau) manier. Baseer je antwoord op de originele brief en de samenvatting.
+Gebruiker: {input}
+Assistent:"""
+)
+# --- Einde Prompts ---
+
+# --- Callback Functies ---
 def process_brief():
     if st.session_state.user_input:
         st.session_state.show_result = True
         st.session_state.feedback_given = False
-        with st.spinner("Ik analyseer de brief en maak een simpele samenvatting..."):
+        with st.spinner("Ik zoek relevante informatie en maak een samenvatting..."):
             try:
-                # De 'invoke' methode geeft de input als een dictionary mee
-                st.session_state.ai_response = qa_chain.invoke({"query": st.session_state.user_input})
+                retrieved_docs = retriever.get_relevant_documents(st.session_state.user_input)
+                context_text = "\n\n".join([doc.metadata.get('volledige_tekst', doc.page_content) for doc in retrieved_docs])
+                response = llm_chain_summary.invoke({
+                    "context": context_text,
+                    "question": st.session_state.user_input
+                })
+                summary_text = response.get('text', 'Kon geen samenvatting maken.')
+                st.session_state.ai_response = { "result": summary_text, "source_documents": retrieved_docs }
+                st.session_state.current_brief_text = st.session_state.user_input
+                st.session_state.current_summary = summary_text
+                st.session_state.messages = [{"role": "assistant", "content": summary_text}]
             except Exception as e:
                 st.error(f"Er ging iets mis tijdens de analyse: {e}")
                 st.session_state.ai_response = None
@@ -156,154 +182,140 @@ def reset_app_state():
     st.session_state.feedback_given = False
     st.session_state.ai_response = None
     st.session_state.user_input = ""
-    st.experimental_rerun()
+    st.session_state.messages = []
+    st.session_state.current_brief_text = ""
+    st.session_state.current_summary = ""
+    st.rerun() # <-- CORRECTE FUNCTIE
 
 # --- Hoofdapplicatie ---
 st.set_page_config(page_title="Hulp bij Moeilijke Brieven", layout="wide")
 st.title("🤖 AI Hulp voor Moeilijke Brieven")
 
-# Session state initialisatie... (onveranderd)
+# Session state initialisatie...
 if 'session_id' not in st.session_state: st.session_state.session_id = str(uuid.uuid4())
 if 'show_result' not in st.session_state: st.session_state.show_result = False
 if 'feedback_given' not in st.session_state: st.session_state.feedback_given = False
 if 'user_input' not in st.session_state: st.session_state.user_input = ""
 if 'ai_response' not in st.session_state: st.session_state.ai_response = None
+if 'messages' not in st.session_state: st.session_state.messages = []
+if 'current_brief_text' not in st.session_state: st.session_state.current_brief_text = ""
+if 'current_summary' not in st.session_state: st.session_state.current_summary = ""
 
+# API-key check...
 if not groq_api_key or not supabase_url or not supabase_key:
-    st.error("Een of meerdere API sleutels (Groq, Supabase) zijn niet ingesteld. De applicatie kan niet starten.")
+    st.error("API sleutels niet gevonden.")
     st.stop()
 
-with st.spinner("De intelligente kennisbank wordt klaargezet..."):
+# --- Initialisatie van componenten ---
+with st.spinner("Kennisbank laden..."):
     vectorstore = load_and_process_data()
     llm = ChatGroq(temperature=0, groq_api_key=groq_api_key, model_name=LLM_MODEL_GROQ)
-    
-    # --- DE NIEUWE, ROBUUSTE OPBOUW VAN DE QA CHAIN ---
-    # Stap 1: Definieer de LLMChain die de prompt en de LLM combineert
-    llm_chain = LLMChain(llm=llm, prompt=PROMPT_UITLEG)
+    retriever = vectorstore.as_retriever()
+    llm_chain_summary = LLMChain(llm=llm, prompt=PROMPT_UITLEG)
 
-    # Stap 2: Definieer de "Stuff" chain, die documenten in de prompt zal proppen.
-    stuff_chain = StuffDocumentsChain(
-        llm_chain=llm_chain,
-        document_variable_name="context" # Vertelt de stuff chain expliciet waar de documenttekst moet komen
-    )
-
-    # Stap 3: Creëer de uiteindelijke RetrievalQA chain, met de stuff_chain als de combineer-stap
-    qa_chain = RetrievalQA(
-        retriever=vectorstore.as_retriever(),
-        combine_documents_chain=stuff_chain, # Gebruik onze custom-built chain
-        return_source_documents=True,
-        input_key="query" # Specificeer de input key voor de .invoke methode
-    )
-    # --- EINDE NIEUWE QA CHAIN OPBOUW ---
-
-
-# --- UI met Tabs (onveranderd) ---
+# --- UI met Tabs ---
 tab1, tab2 = st.tabs(["✉️ **Brief Laten Uitleggen**", "✍️ **Help Mij Schrijven**"])
 
-# ... (De rest van de code voor de UI in tab1 en tab2, en de resultaatweergave blijft EXACT hetzelfde) ...
 with tab1:
-    st.header("Laat je brief uitleggen")
-    agreed = st.checkbox("Ik begrijp dat mijn geüploade brief anoniem wordt verwerkt.", value=True)
-    if agreed:
-        uploaded_file = st.file_uploader("Optie 1: Upload een foto of PDF", type=["jpg", "png", "jpeg", "pdf"])
-        if uploaded_file:
-            with st.spinner('Bestand wordt gelezen...'):
-                try:
-                    if uploaded_file.name.lower().endswith('.pdf'):
-                        with fitz.open(stream=uploaded_file.read(), filetype="pdf") as doc: text_from_file = "".join(page.get_text() for page in doc)
-                    else:
-                        image = Image.open(uploaded_file)
-                        text_from_file = pytesseract.image_to_string(image, lang='nld')
-                    if text_from_file:
-                        st.session_state.user_input = text_from_file
-                        st.success("Het bestand is succesvol gelezen en de tekst staat hieronder.")
-                    else:
-                        st.warning("Ik kon geen tekst vinden in het bestand. Probeer het opnieuw of plak de tekst handmatig.")
-                except Exception as e:
-                    st.error(f"Fout bij het verwerken van het bestand: {e}")
-        st.text_area("Optie 2: Plak de tekst (of controleer/bewerk de tekst van je upload)", key="user_input", height=250, help="Plak hier de volledige tekst van de brief.")
-        col1, col2 = st.columns([1, 4])
-        with col1:
-            st.button("Leg de brief uit", type="primary", on_click=process_brief, disabled=st.session_state.show_result)
+    if not st.session_state.show_result:
+        st.header("Laat je brief uitleggen")
+        agreed = st.checkbox("Ik begrijp dat mijn brief anoniem wordt verwerkt.", value=True)
+        if agreed:
+            uploaded_file = st.file_uploader("Upload foto of PDF", type=["jpg", "png", "jpeg", "pdf"], label_visibility="collapsed")
+            st.text_area("Plak de tekst", key="user_input", height=250, label_visibility="collapsed")
+            st.button("Leg de brief uit", type="primary", on_click=process_brief)
 
+# --- Resultaat & Chat Sectie ---
 if st.session_state.show_result:
+    st.header("Uitleg en gesprek")
+    
+    chat_container = st.container(height=300, border=False)
+    with chat_container:
+        for message in st.session_state.messages:
+            with st.chat_message(message["role"]):
+                st.markdown(message["content"])
+
     st.markdown("---")
-    if st.session_state.ai_response:
-        response = st.session_state.ai_response
-        answer = response.get('result', 'Sorry, er is iets misgegaan. Probeer het opnieuw.')
-        
-        st.subheader("Simpele Uitleg van je Brief:")
-        st.markdown(answer, unsafe_allow_html=True)
-        
+    
+    if len(st.session_state.messages) == 1:
         st.subheader("Laat de uitleg voorlezen:")
         try:
-            tts = gTTS(text=answer, lang='nl')
+            tts = gTTS(text=st.session_state.current_summary, lang='nl')
             tts.save("uitleg.mp3")
             st.audio("uitleg.mp3")
         except Exception as e:
-            st.warning(f"Het voorlezen is nu niet beschikbaar. Fout: {e}")
-        
-        st.write("---")
-        if not st.session_state.feedback_given:
-            st.write("**Heeft deze uitleg je geholpen?**")
-            cols = st.columns(2)
-            cols[0].button("👍 Ja, dit was nuttig", on_click=handle_feedback, args=(1,), use_container_width=True)
-            cols[1].button("👎 Nee, dit was niet duidelijk", on_click=handle_feedback, args=(0,), use_container_width=True)
-        else:
-            st.success("Bedankt voor je feedback!")
-        with st.expander("Bekijk welke informatie is gebruikt voor de samenvatting"):
-            source_docs = response.get('source_documents', [])
-            if source_docs:
-                for doc in source_docs: st.info(f"**Gevonden document:** Bron: '{doc.metadata.get('bron')}', Onderwerp: '{doc.metadata.get('onderwerp')}'")
-            else:
-                st.write("Er is geen specifiek brondocument uit de database gebruikt.")
+            st.warning(f"Voorlezen is nu niet beschikbaar. Fout: {e}")
+        st.markdown("---")
+
+    if not st.session_state.feedback_given:
+        st.write("**Heeft de *eerste samenvatting* je geholpen?**")
+        cols = st.columns(2)
+        if cols[0].button("👍 Ja", use_container_width=True):
+            handle_feedback(1)
+            st.rerun() # <-- CORRECTE FUNCTIE
+        if cols[1].button("👎 Nee", use_container_width=True):
+            handle_feedback(0)
+            st.rerun() # <-- CORRECTE FUNCTIE
     else:
-        st.warning("De analyse kon niet worden voltooid. Controleer de ingevoerde tekst en probeer het opnieuw.")
+        st.success("Bedankt voor je feedback!")
+
+    if prompt := st.chat_input("Stel hier uw vraag over de brief..."):
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        
+        with st.spinner("Even denken..."):
+            memory = ConversationBufferMemory(memory_key="history", return_messages=False)
+            for msg in st.session_state.messages[:-1]:
+                if msg['role'] == 'user':
+                    memory.chat_memory.add_user_message(msg['content'])
+                else:
+                    memory.chat_memory.add_ai_message(msg['content'])
+            
+            conversation = ConversationChain(llm=llm, prompt=PROMPT_CHAT, memory=memory, verbose=False)
+            response = conversation.predict(
+                input=prompt, 
+                original_brief=st.session_state.current_brief_text,
+                summary=st.session_state.current_summary
+            )
+            st.session_state.messages.append({"role": "assistant", "content": response})
+        
+        st.rerun() # <-- CORRECTE FUNCTIE
+        
+    st.markdown("---")
     st.button("Begin opnieuw met een nieuwe brief", on_click=reset_app_state, use_container_width=True)
 
 with tab2:
-    st.header("Maak een professionele brief in simpele stappen")
-    st.write("Kies welk soort brief je wilt sturen en vul de details in. De AI schrijft dan een voorbeeld voor je.")
-    
-    brief_type = st.selectbox(
-        "**Stap 1: Kies wat voor soort brief je wilt schrijven**",
-        [
-            "--- Kies een optie ---", 
-            "Vraag om uitstel van betaling", 
-            "Bezwaar maken tegen een boete of beslissing", 
-            "Een afspraak afzeggen of verzetten", 
-            "Een abonnement of contract opzeggen",
-            "Sollicitatiebrief", 
-            "Klacht indienen"
-        ],
-        key="brief_type_select"
-    )
-    
+    st.header("Maak een professionele brief")
+    st.write("Kies welk soort brief je wilt sturen en vul de details in.")
+    brief_type = st.selectbox("**Stap 1: Soort brief**", ["--- Kies een optie ---", "Vraag om uitstel van betaling", "Bezwaar maken", "Afspraak afzeggen", "Abonnement opzeggen", "Sollicitatiebrief", "Klacht indienen"], key="brief_type_select")
+    toon_keuze = st.selectbox("**Stap 2: Toon**", ["Zakelijk en formeel", "Vriendelijk maar dringend", "Neutraal en informatief", "Streng en direct", "Zeer boos en ontevreden"], key="toon_select")
     if brief_type != "--- Kies een optie ---":
         st.write("---")
-        st.subheader("**Stap 2: Vul de details in**")
-        ontvanger = st.text_input("Aan wie is de brief? (Naam bedrijf of persoon)", key="ontvanger_input")
-        kenmerk = st.text_input("Wat is het kenmerk, factuurnummer, vacaturenummer of klantnummer?", key="kenmerk_input")
-        
+        st.subheader("**Stap 3: Details**")
+        ontvanger = st.text_input("Aan wie?", key="ontvanger_input")
+        kenmerk = st.text_input("Kenmerk (factuurnummer, etc.)?", key="kenmerk_input")
         if "uitstel" in brief_type: extra_info_prompt = "Waarom vraag je uitstel en wanneer kun je wel betalen?"
-        elif "Bezwaar" in brief_type: extra_info_prompt = "Waarom ben je het niet eens met de boete of beslissing?"
-        elif "afspraak" in brief_type: extra_info_prompt = "Over welke afspraak gaat het (datum en tijd) en wanneer zou je wel kunnen?"
-        elif "abonnement" in brief_type: extra_info_prompt = "Per wanneer wil je opzeggen? Vermeld eventueel de reden."
-        elif "Sollicitatiebrief" in brief_type: extra_info_prompt = "Voor welke functie en bij welk bedrijf solliciteer je? Wat zijn je belangrijkste vaardigheden voor deze baan?"
-        elif "Klacht" in brief_type: extra_info_prompt = "Waarover gaat uw klacht (product/dienst)? Wat is er misgegaan en welke oplossing wilt u?"
+        elif "Bezwaar" in brief_type: extra_info_prompt = "Waarom ben je het niet eens?"
+        elif "afspraak" in brief_type: extra_info_prompt = "Welke afspraak (datum/tijd)? Wanneer zou je wel kunnen?"
+        elif "abonnement" in brief_type: extra_info_prompt = "Per wanneer wil je opzeggen?"
+        elif "Sollicitatiebrief" in brief_type: extra_info_prompt = "Voor welke functie? Wat zijn je vaardigheden?"
+        elif "Klacht" in brief_type: extra_info_prompt = "Waarover gaat uw klacht? Wat is de gewenste oplossing?"
         else: extra_info_prompt = "Extra informatie:"
-        
         extra_info = st.text_area(extra_info_prompt, key=f"extra_info_{brief_type.replace(' ', '_')}")
-        
         if st.button("Schrijf mijn voorbeeldbrief", type="primary", key="button_tab2"):
-            if ontvanger and kenmerk:
-                schrijf_prompt = f"Schrijf een korte, beleefde en formele Nederlandse brief op B1-niveau. Doel: '{brief_type}'. Aan: {ontvanger}. Kenmerk: {kenmerk}. Gebruik deze extra informatie van de gebruiker: '{extra_info}'. Zorg voor een correcte aanhef, structuur met alinea's, en een formele afsluiting."
+            if ontvanger:
+                schrijf_prompt = f"""Schrijf een Nederlandse brief op B1-niveau.
+                - Doel: '{brief_type}'
+                - Aan: {ontvanger}
+                - Kenmerk: {kenmerk}
+                - Toon: '{toon_keuze}'
+                - Extra info: '{extra_info}'
+                Zorg voor een correcte aanhef, logische structuur, en formele afsluiting."""
                 with st.spinner("Ik schrijf een voorbeeldbrief..."):
                     response = llm.invoke(schrijf_prompt)
                     st.subheader("Jouw voorbeeldbrief:")
                     st.text_area("Je kunt deze tekst kopiëren en aanpassen:", value=response.content, height=400, key="result_brief")
             else:
-                st.warning("Vul in ieder geval de naam van de ontvanger en het kenmerk in.")
+                st.warning("Vul de naam van de ontvanger in.")
 
 st.markdown("---")
 with st.expander("Privacy en Veiligheid"):

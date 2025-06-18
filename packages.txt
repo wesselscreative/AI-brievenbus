@@ -1,3 +1,4 @@
 build-essential
 tesseract-ocr
 tesseract-ocr-nld
+libtesseract-dev
