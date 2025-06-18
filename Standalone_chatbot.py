@@ -14,13 +14,10 @@ import pytesseract
 from gtts import gTTS
 from supabase import create_client, Client
 
-# Imports voor de chains en geheugen
-from langchain.chains import ConversationChain
+# --- IMPORTS (alleen LLMChain is nu nodig) ---
 from langchain.chains.llm import LLMChain
-from langchain.memory import ConversationBufferMemory
 
-# --- Configuratie & Setup ---
-# ... (Dit deel blijft onveranderd) ...
+# --- Configuratie & Setup (NU CORRECT) ---
 load_dotenv()
 groq_api_key = st.secrets.get("GROQ_API_KEY", os.getenv("GROQ_API_KEY"))
 supabase_url = st.secrets.get("SUPABASE_URL", os.getenv("SUPABASE_URL"))
@@ -125,8 +122,9 @@ VRAAG (NEGEER DEZE, FOCUS OP DE CONTEXT):
 HELPENDE ANTWOORD:"""
 )
 
-PROMPT_CHAT = PromptTemplate.from_template(
-    """Je bent een behulpzame AI-assistent. De gebruiker heeft een moeilijke brief laten samenvatten.
+PROMPT_CHAT = PromptTemplate(
+    input_variables=["history", "input", "original_brief", "summary"],
+    template="""Je bent een behulpzame AI-assistent. De gebruiker heeft een moeilijke brief laten samenvatten.
 De volledige, originele tekst van de brief was:
 ---
 {original_brief}
@@ -142,7 +140,6 @@ Beantwoord nu de nieuwe vraag van de gebruiker op een simpele en duidelijke (A2-
 Gebruiker: {input}
 Assistent:"""
 )
-# --- Einde Prompts ---
 
 # --- Callback Functies ---
 def process_brief():
@@ -159,7 +156,7 @@ def process_brief():
                 })
                 summary_text = response.get('text', 'Kon geen samenvatting maken.')
                 st.session_state.ai_response = { "result": summary_text, "source_documents": retrieved_docs }
-                st.session_state.current_brief_text = st.session_state.user_input
+                st.session_state.current_brief_text = context_text
                 st.session_state.current_summary = summary_text
                 st.session_state.messages = [{"role": "assistant", "content": summary_text}]
             except Exception as e:
@@ -185,13 +182,12 @@ def reset_app_state():
     st.session_state.messages = []
     st.session_state.current_brief_text = ""
     st.session_state.current_summary = ""
-    st.rerun() # <-- CORRECTE FUNCTIE
+    st.rerun()
 
 # --- Hoofdapplicatie ---
 st.set_page_config(page_title="Hulp bij Moeilijke Brieven", layout="wide")
 st.title("🤖 AI Hulp voor Moeilijke Brieven")
 
-# Session state initialisatie...
 if 'session_id' not in st.session_state: st.session_state.session_id = str(uuid.uuid4())
 if 'show_result' not in st.session_state: st.session_state.show_result = False
 if 'feedback_given' not in st.session_state: st.session_state.feedback_given = False
@@ -201,19 +197,16 @@ if 'messages' not in st.session_state: st.session_state.messages = []
 if 'current_brief_text' not in st.session_state: st.session_state.current_brief_text = ""
 if 'current_summary' not in st.session_state: st.session_state.current_summary = ""
 
-# API-key check...
 if not groq_api_key or not supabase_url or not supabase_key:
     st.error("API sleutels niet gevonden.")
     st.stop()
 
-# --- Initialisatie van componenten ---
 with st.spinner("Kennisbank laden..."):
     vectorstore = load_and_process_data()
     llm = ChatGroq(temperature=0, groq_api_key=groq_api_key, model_name=LLM_MODEL_GROQ)
     retriever = vectorstore.as_retriever()
     llm_chain_summary = LLMChain(llm=llm, prompt=PROMPT_UITLEG)
 
-# --- UI met Tabs ---
 tab1, tab2 = st.tabs(["✉️ **Brief Laten Uitleggen**", "✍️ **Help Mij Schrijven**"])
 
 with tab1:
@@ -225,16 +218,13 @@ with tab1:
             st.text_area("Plak de tekst", key="user_input", height=250, label_visibility="collapsed")
             st.button("Leg de brief uit", type="primary", on_click=process_brief)
 
-# --- Resultaat & Chat Sectie ---
 if st.session_state.show_result:
     st.header("Uitleg en gesprek")
-    
     chat_container = st.container(height=300, border=False)
     with chat_container:
         for message in st.session_state.messages:
             with st.chat_message(message["role"]):
                 st.markdown(message["content"])
-
     st.markdown("---")
     
     if len(st.session_state.messages) == 1:
@@ -252,33 +242,33 @@ if st.session_state.show_result:
         cols = st.columns(2)
         if cols[0].button("👍 Ja", use_container_width=True):
             handle_feedback(1)
-            st.rerun() # <-- CORRECTE FUNCTIE
+            st.rerun()
         if cols[1].button("👎 Nee", use_container_width=True):
             handle_feedback(0)
-            st.rerun() # <-- CORRECTE FUNCTIE
+            st.rerun()
     else:
         st.success("Bedankt voor je feedback!")
 
     if prompt := st.chat_input("Stel hier uw vraag over de brief..."):
         st.session_state.messages.append({"role": "user", "content": prompt})
-        
         with st.spinner("Even denken..."):
-            memory = ConversationBufferMemory(memory_key="history", return_messages=False)
+            history_str = ""
             for msg in st.session_state.messages[:-1]:
-                if msg['role'] == 'user':
-                    memory.chat_memory.add_user_message(msg['content'])
-                else:
-                    memory.chat_memory.add_ai_message(msg['content'])
+                role = "Gebruiker" if msg['role'] == 'user' else 'Assistent'
+                history_str += f"{role}: {msg['content']}\n"
             
-            conversation = ConversationChain(llm=llm, prompt=PROMPT_CHAT, memory=memory, verbose=False)
-            response = conversation.predict(
-                input=prompt, 
-                original_brief=st.session_state.current_brief_text,
-                summary=st.session_state.current_summary
-            )
-            st.session_state.messages.append({"role": "assistant", "content": response})
-        
-        st.rerun() # <-- CORRECTE FUNCTIE
+            chat_chain = LLMChain(llm=llm, prompt=PROMPT_CHAT)
+            
+            response = chat_chain.invoke({
+                "history": history_str,
+                "input": prompt,
+                "original_brief": st.session_state.current_brief_text,
+                "summary": st.session_state.current_summary
+            })
+            
+            ai_response_text = response.get('text', "Sorry, ik kan geen antwoord genereren.")
+            st.session_state.messages.append({"role": "assistant", "content": ai_response_text})
+        st.rerun()
         
     st.markdown("---")
     st.button("Begin opnieuw met een nieuwe brief", on_click=reset_app_state, use_container_width=True)
