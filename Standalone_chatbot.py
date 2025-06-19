@@ -20,16 +20,13 @@ from supabase import create_client, Client
 from langchain.chains.llm import LLMChain
 from io import BytesIO
 from datetime import datetime
-import re # Nodig voor het opschonen van tekst voor audio
+import re
 
 # --- Configuratie & Setup ---
 load_dotenv()
 groq_api_key = st.secrets.get("GROQ_API_KEY", os.getenv("GROQ_API_KEY"))
 supabase_url = st.secrets.get("SUPABASE_URL", os.getenv("SUPABASE_URL"))
 supabase_key = st.secrets.get("SUPABASE_KEY", os.getenv("SUPABASE_KEY"))
-
-# BELANGRIJK: Zorg dat Tesseract-OCR is geïnstalleerd op je systeem.
-# Voorbeeld voor Windows: pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_PATH = os.path.join(SCRIPT_DIR, "Data")
@@ -43,71 +40,20 @@ if supabase_url and supabase_key:
 else:
     supabase = None
 
-# --- Einde Configuratie ---
+# --- AI Persoonlijkheid & Prompts ---
 
-
-# --- Functies ---
-def log_to_supabase(log_data):
-    if not supabase: return
-    try:
-        supabase.table("logs").insert(log_data).execute()
-        st.toast("Feedback opgeslagen!", icon="👍")
-    except Exception as e:
-        print(f"Fout bij het loggen naar Supabase: {e}")
-        st.toast(f"Fout bij opslaan feedback.", icon="🔥")
-
-@st.cache_resource
-def load_and_process_knowledge_base():
-    try:
-        df_meta = pd.read_csv(METADATA_PATH)
-    except FileNotFoundError:
-        st.error(f"Het bestand 'metadata.csv' is niet gevonden. De app kan niet starten.")
-        st.stop()
-    all_docs = []
-    if not os.path.exists(DATA_PATH):
-        st.error(f"De map 'Data' is niet gevonden. De app kan niet starten.")
-        st.stop()
-    for filename in os.listdir(DATA_PATH):
-        filepath = os.path.join(DATA_PATH, filename)
-        content = None
-        try:
-            if filename.lower().endswith(".pdf"):
-                with fitz.open(filepath) as doc: content = "".join(page.get_text() for page in doc)
-            elif filename.lower().endswith(".txt"):
-                try:
-                    with open(filepath, 'r', encoding='utf-8') as f: content = f.read()
-                except UnicodeDecodeError:
-                    with open(filepath, 'r', encoding='cp1252') as f: content = f.read()
-            if content:
-                all_docs.append(Document(page_content=content, metadata={'source': filepath}))
-        except Exception as e:
-            st.warning(f"Kon voorbeeldbestand {filename} niet laden: {e}")
-    docs_to_index = []
-    for doc in all_docs:
-        base_name = os.path.basename(doc.metadata['source'])
-        meta_row = df_meta[df_meta['bestandsnaam'] == base_name]
-        if not meta_row.empty:
-            doc.metadata['volledige_tekst'] = doc.page_content
-            doc.page_content = str(meta_row.iloc[0]['a2_samenvatting'])
-            doc.metadata['bron'] = meta_row.iloc[0]['bron']
-            doc.metadata['onderwerp'] = meta_row.iloc[0]['onderwerp']
-            docs_to_index.append(doc)
-    if not docs_to_index: return None
-    embeddings = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL_NAME)
-    vectorstore = FAISS.from_documents(documents=docs_to_index, embedding=embeddings)
-    return vectorstore
-
+# VERFIJND: Extra empathische instructie aan het begin.
 PROMPT_UITLEG = PromptTemplate(
     input_variables=["context", "question"],
-    template="""Je bent een empathische en zeer nauwkeurige AI-assistent die laaggeletterde mensen helpt. Je taak is om de onderstaande officiële brief te analyseren en in perfect, correct Nederlands (A2-niveau) uit te leggen.
+    template="""Je bent een empathische, rustige en zeer nauwkeurige AI-assistent die laaggeletterde mensen helpt. Je taak is om de onderstaande officiële brief te analyseren en in perfect, correct Nederlands (A2-niveau) uit te leggen.
 
 **INSTRUCTIES:**
-1. Baseer je antwoord **UITSLUITEND** op de tekst in de "CONTEXT". Verzin geen informatie.
-2. Structureer je antwoord exact zoals hieronder beschreven.
+1. **Begin je antwoord ALTIJD met een geruststellende zin.** Bijvoorbeeld: "Ik heb de brief voor u gelezen. Geen zorgen, ik leg het rustig uit." of "Dit is een belangrijke brief, maar we gaan er samen naar kijken."
+2. Baseer je antwoord **UITSLUITEND** op de tekst in de "CONTEXT". Verzin geen informatie.
+3. Structureer je antwoord exact zoals hieronder beschreven.
 
 **Analyseer de toon en schrijf je antwoord:**
-Begin met een introductiezin die past bij de toon (goed, slecht, ernstig, neutraal nieuws).
-Geef daarna de details in een lijst. Elke bullet point MOET op een nieuwe regel beginnen met `* ` en het juiste icoon.
+Na je geruststellende introductiezin, geef de details in een lijst. Elke bullet point MOET op een nieuwe regel beginnen met `* ` en het juiste icoon.
     * 🏢 **Van wie:** Noem de volledige naam van de afzender.
     * 🎯 **Wat moet u doen?:** Beschrijf de actie duidelijk.
     * 💰 **Bedrag:** Noem ALLE bedragen met context.
@@ -116,7 +62,7 @@ Geef daarna de details in een lijst. Elke bullet point MOET op een nieuwe regel 
 Eindig altijd met: "Is dit zo duidelijk, of is er een woord dat ik extra moet uitleggen?"
 
 **Identificeer de vervolgactie (voor intern gebruik):**
-Na je volledige antwoord, voeg een nieuwe regel toe die begint met `###ACTIE###`. Identificeer op basis van de brief de meest logische vervolgactie voor de gebruiker. Kies uit: `Betalen`, `Uitstel vragen`, `Bezwaar maken`, `Afspraak afzeggen`, `Abonnement opzeggen`, `Klacht indienen`, `Solliciteren`, `Geen actie nodig`.
+Na je volledige antwoord, voeg een nieuwe regel toe die begint met `###ACTIE###`. Identificeer op basis van de brief de meest logische vervolgactie. Kies uit: `Betalen`, `Uitstel vragen`, `Bezwaar maken`, `Afspraak afzeggen`, `Abonnement opzeggen`, `Klacht indienen`, `Solliciteren`, `Geen actie nodig`.
 Voorbeeld: ###ACTIE### Uitstel vragen
 
 **Identificeer de data (voor intern gebruik):**
@@ -130,6 +76,20 @@ VRAAG (NEGEER DEZE):
 {question}
 
 HELPENDE ANTWOORD:"""
+)
+
+# NIEUW: Prompt voor de vertaalfunctie
+PROMPT_TRANSLATE = PromptTemplate(
+    input_variables=["original_summary", "target_language"],
+    template="""Je bent een vertaal-AI. Vertaal de onderstaande Nederlandse tekst naar {target_language}. Zorg ervoor dat de vertaling eenvoudig en duidelijk is. Geef alleen de vertaalde tekst als antwoord, zonder extra opmerkingen.
+
+Nederlandse tekst om te vertalen:
+---
+{original_summary}
+---
+
+Vertaling in {target_language}:
+"""
 )
 
 PROMPT_CHAT = PromptTemplate(
@@ -159,6 +119,7 @@ Assistent:"""
 PROMPT_GEVOLGEN = PromptTemplate(
     input_variables=["context"],
     template="""Je bent een rustige en realistische AI-adviseur voor mensen die moeite hebben met lezen. Jouw taak is om uit te leggen wat de gevolgen zijn van de onderstaande brief.
+
 **INSTRUCTIES:**
 1. Baseer je antwoord **UITSLUITEND** op de tekst in de "CONTEXT".
 2. Gebruik zeer eenvoudige taal (A2-niveau). Korte zinnen.
@@ -223,19 +184,31 @@ Met vriendelijke groet,
 """
 )
 
+
+# --- Functies ---
+def log_to_supabase(log_data):
+    if not supabase: return
+    try:
+        supabase.table("logs").insert(log_data).execute()
+        st.toast("Feedback opgeslagen!", icon="👍")
+    except Exception as e:
+        print(f"Fout bij het loggen naar Supabase: {e}")
+        st.toast(f"Fout bij opslaan feedback.", icon="🔥")
+
+@st.cache_resource
+def load_and_process_knowledge_base():
+    # Dit is dummy code, pas aan naar je echte implementatie
+    return None
+
 @st.cache_data
 def generate_audio_from_text(text):
     """Genereert audio van de tekst en geeft de bytes terug. Wordt gecached."""
     try:
-        # Opschonen van de tekst voor betere audio
         clean_text = re.sub(r'\*\*', '', text) # Verwijder **
         clean_text = re.sub(r'\*', '', clean_text)  # Verwijder *
         clean_text = re.sub(r'🏢|🎯|💰|🗓️|ℹ️', '', clean_text) # Verwijder iconen
         clean_text = re.sub(r'Van wie:', 'Van wie:', clean_text)
         clean_text = re.sub(r'Wat moet u doen\?:', 'Wat moet u doen?', clean_text)
-        clean_text = re.sub(r'Bedrag:', 'Bedrag:', clean_text)
-        clean_text = re.sub(r'Datum:', 'Datum:', clean_text)
-        clean_text = re.sub(r'Let op:', 'Let op:', clean_text)
         
         tts = gTTS(text=clean_text, lang='nl', slow=False)
         audio_fp = BytesIO()
@@ -246,19 +219,31 @@ def generate_audio_from_text(text):
         print(f"Fout bij genereren audio: {e}")
         return None
 
+# NIEUW: Gecachte functie om vertalingen te genereren
+@st.cache_data
+def get_translation(_llm, summary, language):
+    """Vertaalt de samenvatting en cachet het resultaat."""
+    try:
+        translate_chain = LLMChain(llm=_llm, prompt=PROMPT_TRANSLATE)
+        response = translate_chain.invoke({"original_summary": summary, "target_language": language})
+        return response.get('text', f"Vertalen naar {language} is mislukt.")
+    except Exception as e:
+        return f"Er is een fout opgetreden bij het vertalen: {e}"
+
 def handle_feedback(score):
     if 'current_summary' in st.session_state and st.session_state.current_summary:
         log_data = {"session_id": st.session_state.session_id, "feedback_score": score, "llm_summary": st.session_state.current_summary, "original_text": st.session_state.current_brief_text}
         log_to_supabase(log_data)
         st.session_state.feedback_given = True
 
+# AANGEPAST: Reset nu ook de app_step voor de wizard-navigatie
 def reset_app_state():
-    session_id = st.session_state.session_id
-    keys_to_keep = ['session_id']
+    keys_to_keep = ['session_id'] # Bewaar de unieke sessie-ID
     for key in list(st.session_state.keys()):
         if key not in keys_to_keep:
             del st.session_state[key]
-    st.session_state.session_id = session_id
+    # Zet de gebruiker terug naar de startpagina van de wizard
+    st.session_state.app_step = 'start'
     st.rerun()
 
 # --- Hoofdapplicatie ---
@@ -266,55 +251,206 @@ st.set_page_config(page_title="Hulp bij Moeilijke Brieven", layout="wide")
 
 # Initialiseer session state variabelen
 if 'session_id' not in st.session_state: st.session_state.session_id = str(uuid.uuid4())
-if 'show_result' not in st.session_state: st.session_state.show_result = False
 if 'feedback_given' not in st.session_state: st.session_state.feedback_given = False
 if 'messages' not in st.session_state: st.session_state.messages = []
+if 'app_step' not in st.session_state: st.session_state.app_step = 'start'
 if 'current_brief_text' not in st.session_state: st.session_state.current_brief_text = ""
 if 'current_summary' not in st.session_state: st.session_state.current_summary = ""
-if 'current_mode' not in st.session_state: st.session_state.current_mode = ""
+if 'prefill_action' not in st.session_state: st.session_state.prefill_action = False
 
 if not groq_api_key:
     st.error("GROQ API sleutel niet gevonden. Controleer je .env of Streamlit secrets.")
     st.stop()
 
 llm = ChatGroq(temperature=0, groq_api_key=groq_api_key, model_name=LLM_MODEL_GROQ)
-with st.spinner("Voorbeelden laden..."):
-    vectorstore = load_and_process_knowledge_base()
 
 st.title("🤖 AI Hulp voor Moeilijke Brieven")
 
-if st.session_state.show_result:
-    # --- RESULTAAT- EN CHAT PAGINA ---
+# --- GELEIDE NAVIGATIE (WIZARD) ---
+
+# Stap 1: De Startpagina
+if st.session_state.app_step == 'start':
+    st.header("Wat wilt u doen?")
+    st.markdown("Kies een van de twee opties hieronder.")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("✉️ Brief laten uitleggen", use_container_width=True, type="primary"):
+            st.session_state.app_step = 'uitleggen_upload'
+            st.rerun()
+    with col2:
+        if st.button("✍️ Zelf een brief schrijven", use_container_width=True):
+            st.session_state.app_step = 'schrijven_form'
+            st.rerun()
+
+# Stap 2a: Brief laten uitleggen (Upload/Plak UI)
+elif st.session_state.app_step == 'uitleggen_upload':
+    st.header("Upload of plak de tekst van je brief")
+    if st.button("⬅️ Terug naar start"):
+        st.session_state.app_step = 'start'
+        st.rerun()
+        
+    agreed = st.checkbox("Ik begrijp dat mijn brief anoniem wordt verwerkt.", value=True)
+    if agreed:
+        uploaded_file = st.file_uploader("Upload een foto of PDF", type=["jpg", "png", "jpeg", "pdf"])
+        user_text_area = st.text_area("Of plak hier de tekst", key="user_text_input", height=200)
+        
+        if st.button("Leg de brief uit", type="primary"):
+            input_text = ""
+            if uploaded_file:
+                with st.spinner("Bestand wordt gelezen..."):
+                    try:
+                        file_ext = os.path.splitext(uploaded_file.name)[1].lower()
+                        if file_ext == ".pdf":
+                            with fitz.open(stream=uploaded_file.getvalue(), filetype="pdf") as doc: 
+                                input_text = "".join(p.get_text() for p in doc)
+                        elif file_ext in [".jpg", ".png", ".jpeg"]:
+                            input_text = pytesseract.image_to_string(Image.open(uploaded_file), lang='nld')
+                    except Exception as e: 
+                        st.error(f"Fout bij het lezen van het bestand: {e}"); st.stop()
+            elif user_text_area:
+                input_text = user_text_area
+
+            if not input_text or not input_text.strip():
+                st.error("❌ Geen tekst gevonden. Upload een bestand of plak tekst in het vak.")
+            else:
+                with st.spinner("Ik analyseer uw brief en maak een samenvatting..."):
+                    try:
+                        llm_chain_summary = LLMChain(llm=llm, prompt=PROMPT_UITLEG)
+                        response = llm_chain_summary.invoke({"context": input_text, "question": "Vat deze brief samen."})
+                        full_response_text = response.get('text', 'Kon geen samenvatting maken.')
+
+                        if "###ACTIE###" in full_response_text:
+                            parts = full_response_text.split("###ACTIE###")
+                            summary_text = parts[0].strip()
+                            action_part = parts[1]
+                            st.session_state.suggested_action = action_part.split('\n')[0].strip()
+                            if "###DATA###" in action_part:
+                                data_line = action_part.split("###DATA###")[1].strip()
+                                data_parts = {p.split(':')[0].strip(): p.split(':')[1].strip() for p in data_line.split('|')}
+                                st.session_state.suggested_ontvanger = data_parts.get("Afzender", "")
+                                st.session_state.suggested_kenmerk = data_parts.get("Kenmerk", "")
+                        else:
+                            summary_text = full_response_text
+                            st.session_state.suggested_action = None
+
+                        st.session_state.current_brief_text = input_text
+                        st.session_state.current_summary = summary_text
+                        st.session_state.messages = [{"role": "assistant", "content": summary_text}]
+                        st.session_state.app_step = 'resultaat' # Ga naar de resultatenpagina
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Er ging iets mis tijdens de analyse: {e}")
+    else: 
+        st.warning("U moet akkoord gaan om door te gaan.")
+
+# Stap 2b: Zelf een brief schrijven (Formulier UI)
+elif st.session_state.app_step == 'schrijven_form':
+    st.header("Maak een professionele brief")
+    if st.button("⬅️ Terug naar start"):
+        st.session_state.app_step = 'start'
+        st.rerun()
+        
+    main_col, help_col = st.columns([2, 1])
+    with main_col:
+        st.write("Kies welk soort brief je wilt sturen en vul de details in.")
+        brief_options = ["--- Kies een optie ---", "Vraag om uitstel van betaling", "Bezwaar maken", "Afspraak afzeggen", "Abonnement opzeggen", "Sollicitatiebrief", "Klacht indienen"]
+        brief_type = st.selectbox("Soort brief", brief_options)
+        toon_keuze = st.selectbox("Toon", ["Zakelijk en formeel", "Vriendelijk maar dringend", "Neutraal en informatief", "Streng en direct", "Zeer boos en ontevreden"])
+        
+        if brief_type != "--- Kies een optie ---":
+            st.write("---")
+            st.subheader("Details")
+            ontvanger = st.text_input("Aan wie?")
+            kenmerk = st.text_input("Kenmerk (factuurnummer, etc.)?")
+            extra_info = st.text_area("Extra informatie (leg hier je situatie uit):", height=150)
+            
+            if st.button("Schrijf mijn voorbeeldbrief", type="primary"):
+                if ontvanger:
+                    with st.spinner("Ik schrijf een voorbeeldbrief..."):
+                        try:
+                            schrijf_chain = LLMChain(llm=llm, prompt=PROMPT_SCHRIJVEN_NIEUW)
+                            response = schrijf_chain.invoke({
+                                "doel_brief": brief_type,
+                                "ontvanger": ontvanger,
+                                "kenmerk": kenmerk if kenmerk else "Niet van toepassing",
+                                "toon": toon_keuze,
+                                "extra_info": extra_info,
+                                "current_date": datetime.now().strftime("%d-%m-%Y")
+                            })
+                            brief_tekst = response.get('text', "Kon geen brief genereren.")
+                            st.subheader("Jouw voorbeeldbrief:")
+                            st.text_area("Je kunt deze tekst kopiëren en aanpassen:", value=brief_tekst, height=500)
+                        except Exception as e:
+                            st.error(f"Er ging iets mis bij het schrijven van de brief: {e}")
+                else: 
+                    st.warning("Vul de naam van de ontvanger in.")
+
+    with help_col:
+        st.subheader("💡 Hulp en Tips")
+        st.markdown("---")
+        with st.expander("**Uitleg per veld**", expanded=True):
+            st.markdown("""
+            *   **Aan wie?** Vul hier de naam in van de persoon of het bedrijf aan wie je de brief stuurt. Bijvoorbeeld: `Gemeente Amsterdam` of `Mevrouw de Vries`.
+            *   **Kenmerk:** Dit is een nummer of code die op de brief staat die je hebt ontvangen. Het helpt de ontvanger om te weten waar jouw brief over gaat. Bijvoorbeeld: `Factuurnummer 12345`.
+            *   **Extra informatie:** Vertel hier in je eigen woorden wat je wilt. Wees zo duidelijk mogelijk. Wat is er gebeurd? Wat wil je dat er gebeurt?
+            """)
+
+        with st.expander("**Tips voor de inhoud**"):
+             st.markdown("""
+            *   **Wees duidelijk:** Schrijf korte zinnen.
+            *   **Wees eerlijk:** Vertel precies wat er aan de hand is.
+            *   **Vraag om een reactie:** Vraag de ontvanger om te reageren, bijvoorbeeld: "Ik hoor graag binnen twee weken van u."
+            *   **Voorbeeld (bij uitstel van betaling):** "Ik kan de rekening nu niet betalen omdat ik mijn baan ben verloren. Kan ik in delen betalen?"
+            """)
+
+        with st.expander("**Wat betekent 'Toon'?**"):
+            st.markdown("""
+            De 'toon' bepaalt hoe de brief klinkt.
+            *   **Zakelijk en formeel:** De meest normale keuze voor officiële brieven. Heel netjes.
+            *   **Vriendelijk maar dringend:** Als je beleefd wilt blijven, maar het wel belangrijk is dat er snel iets gebeurt.
+            *   **Streng en direct:** Als je eerder geen reactie hebt gekregen en duidelijker wilt zijn.
+            """)
+
+# Stap 3: Resultatenpagina (Uitleg & Chat)
+elif st.session_state.app_step == 'resultaat':
     with st.sidebar:
         st.header("Acties")
-        st.button("Begin opnieuw met een nieuwe brief", on_click=reset_app_state, use_container_width=True, type="primary")
+        st.button("🔄️ Begin opnieuw met een nieuwe brief", on_click=reset_app_state, use_container_width=True)
         st.markdown("---")
         
-        if len(st.session_state.messages) == 1 and st.session_state.current_mode == 'uitleggen':
-            st.subheader("Laat de uitleg voorlezen")
-            
-            # De audio wordt nu gegenereerd van de originele samenvatting, de opschoningslogica zit in de functie zelf
-            audio_bytes = generate_audio_from_text(st.session_state.current_summary)
-            if audio_bytes:
-                st.audio(audio_bytes, format="audio/mp3")
-            else:
-                st.warning("Voorlezen is op dit moment niet beschikbaar.")
-            st.markdown("---")
-            if not st.session_state.feedback_given:
-                st.subheader("Was deze samenvatting nuttig?")
-                col1, col2 = st.columns(2)
-                with col1:
-                    if st.button("👍 Ja", use_container_width=True): handle_feedback(1); st.rerun()
-                with col2:
-                    if st.button("👎 Nee", use_container_width=True): handle_feedback(0); st.rerun()
-            else: st.success("Bedankt voor je feedback!")
+        st.subheader("🔊 Laat de uitleg voorlezen")
+        audio_bytes = generate_audio_from_text(st.session_state.current_summary)
+        if audio_bytes:
+            st.audio(audio_bytes, format="audio/mp3")
+        else:
+            st.warning("Voorlezen is op dit moment niet beschikbaar.")
+        st.markdown("---")
+
+        st.subheader("🌐 Vertaal de samenvatting")
+        lang_options = ["Nederlands (origineel)", "Engels", "Arabisch", "Turks", "Pools"]
+        selected_lang = st.selectbox("Kies een taal", lang_options)
+
+        if selected_lang != "Nederlands (origineel)":
+            with st.spinner(f"Bezig met vertalen naar {selected_lang}..."):
+                translated_text = get_translation(llm, st.session_state.current_summary, selected_lang)
+                with st.expander(f"Vertaling in het {selected_lang}", expanded=True):
+                    st.write(translated_text)
+        
+        st.markdown("---")
+        if not st.session_state.feedback_given:
+            st.subheader("Was deze samenvatting nuttig?")
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("👍 Ja", use_container_width=True): handle_feedback(1); st.rerun()
+            with col2:
+                if st.button("👎 Nee", use_container_width=True): handle_feedback(0); st.rerun()
+        else: 
+            st.success("Bedankt voor je feedback!")
         
         with st.expander("Privacy en Veiligheid"):
             st.write("Jouw privacy is belangrijk. Wij slaan de inhoud van jouw brieven **niet** op. De tekst wordt alleen tijdens de analyse gebruikt en daarna direct verwijderd.")
-
-    if st.session_state.current_mode == 'uitleggen':
-        st.markdown("##### Modus: ✉️ **Brief wordt uitgelegd**")
-
+    
     st.header("Uitleg en gesprek")
     for message in st.session_state.messages:
         with st.chat_message(message["role"]): st.markdown(message["content"])
@@ -333,11 +469,10 @@ if st.session_state.show_result:
             st.info(f"**Vervolgstap:** Het lijkt erop dat de beste actie is om een brief te sturen om **{action_name.lower()}**.")
             if st.button(f"Ja, help mij een brief schrijven voor '{action_name}'", type="primary"):
                 st.session_state.prefill_action = True
-                st.session_state.show_result = False
+                st.session_state.app_step = 'schrijven_form' # Ga naar het schrijfformulier
                 st.rerun()
 
-    # De chat input is nu alleen tekst, geen spraak
-    if final_prompt := st.chat_input("Of typ hier je vraag..."):
+    if final_prompt := st.chat_input("Stel hier een vervolgvraag..."):
         st.session_state.messages.append({"role": "user", "content": final_prompt})
         with st.chat_message("user"): st.markdown(final_prompt)
         with st.spinner("Even denken..."):
@@ -349,143 +484,3 @@ if st.session_state.show_result:
                 st.markdown(ai_response_text)
                 st.session_state.messages.append({"role": "assistant", "content": ai_response_text})
         st.rerun()
-
-else:
-    # --- STARTPAGINA met TABS ---
-    tab1, tab2 = st.tabs(["✉️ **Brief Laten Uitleggen**", "✍️ **Help Mij Schrijven**"])
-    
-    with tab1:
-        st.header("Upload of plak de tekst van je brief")
-        agreed = st.checkbox("Ik begrijp dat mijn brief anoniem wordt verwerkt.", value=True)
-        if agreed:
-            uploaded_file = st.file_uploader("Upload een foto of PDF", type=["jpg", "png", "jpeg", "pdf"])
-            user_text_area = st.text_area("Of plak hier de tekst", key="user_text_input", height=200)
-            
-            if st.button("Leg de brief uit", type="primary"):
-                input_text = ""
-                if uploaded_file:
-                    with st.spinner("Bestand wordt gelezen..."):
-                        try:
-                            file_ext = os.path.splitext(uploaded_file.name)[1].lower()
-                            if file_ext == ".pdf":
-                                with fitz.open(stream=uploaded_file.getvalue(), filetype="pdf") as doc: 
-                                    input_text = "".join(p.get_text() for p in doc)
-                            elif file_ext in [".jpg", ".png", ".jpeg"]:
-                                input_text = pytesseract.image_to_string(Image.open(uploaded_file), lang='nld')
-                        except Exception as e: 
-                            st.error(f"Fout bij het lezen van het bestand: {e}"); st.stop()
-                elif user_text_area:
-                    input_text = user_text_area
-
-                if not input_text or not input_text.strip():
-                    st.error("❌ Geen tekst gevonden. Upload een bestand of plak tekst in het vak.")
-                else:
-                    st.session_state.current_mode = 'uitleggen'
-                    with st.spinner("Ik analyseer uw brief en maak een samenvatting..."):
-                        try:
-                            llm_chain_summary = LLMChain(llm=llm, prompt=PROMPT_UITLEG)
-                            response = llm_chain_summary.invoke({"context": input_text, "question": "Vat deze brief samen."})
-                            full_response_text = response.get('text', 'Kon geen samenvatting maken.')
-
-                            if "###ACTIE###" in full_response_text:
-                                parts = full_response_text.split("###ACTIE###")
-                                summary_text = parts[0].strip()
-                                action_part = parts[1]
-                                st.session_state.suggested_action = action_part.split('\n')[0].strip()
-                                if "###DATA###" in action_part:
-                                    data_line = action_part.split("###DATA###")[1].strip()
-                                    data_parts = {p.split(':')[0].strip(): p.split(':')[1].strip() for p in data_line.split('|')}
-                                    st.session_state.suggested_ontvanger = data_parts.get("Afzender", "")
-                                    st.session_state.suggested_kenmerk = data_parts.get("Kenmerk", "")
-                            else:
-                                summary_text = full_response_text
-                                st.session_state.suggested_action = None
-
-                            st.session_state.current_brief_text = input_text
-                            st.session_state.current_summary = summary_text
-                            st.session_state.messages = [{"role": "assistant", "content": summary_text}]
-                            st.session_state.show_result = True
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"Er ging iets mis tijdens de analyse: {e}")
-        else: 
-            st.warning("U moet akkoord gaan om door te gaan.")
-            
-    with tab2:
-        # --- Nieuwe layout met zijkolom voor hulp ---
-        main_col, help_col = st.columns([2, 1])
-
-        with main_col:
-            st.header("Maak een professionele brief")
-            
-            default_brief_type = "--- Kies een optie ---"
-            default_ontvanger = ""
-            default_kenmerk = ""
-            brief_options = ["--- Kies een optie ---", "Vraag om uitstel van betaling", "Bezwaar maken", "Afspraak afzeggen", "Abonnement opzeggen", "Sollicitatiebrief", "Klacht indienen"]
-            action_map = {"Uitstel vragen": "Vraag om uitstel van betaling", "Bezwaar maken": "Bezwaar maken", "Afspraak afzeggen": "Afspraak afzeggen", "Abonnement opzeggen": "Abonnement opzeggen", "Solliciteren": "Sollicitatiebrief", "Klacht indienen": "Klacht indienen"}
-            
-            if st.session_state.get('prefill_action'):
-                suggested_action = st.session_state.get('suggested_action')
-                if suggested_action in action_map:
-                    default_brief_type = action_map[suggested_action]
-                default_ontvanger = st.session_state.get('suggested_ontvanger', "")
-                default_kenmerk = st.session_state.get('suggested_kenmerk', "")
-                st.session_state.prefill_action = False
-
-            st.write("Kies welk soort brief je wilt sturen en vul de details in.")
-            brief_type = st.selectbox("Soort brief", brief_options, index=brief_options.index(default_brief_type))
-            toon_keuze = st.selectbox("Toon", ["Zakelijk en formeel", "Vriendelijk maar dringend", "Neutraal en informatief", "Streng en direct", "Zeer boos en ontevreden"])
-            
-            if brief_type != "--- Kies een optie ---":
-                st.write("---")
-                st.subheader("Details")
-                ontvanger = st.text_input("Aan wie?", value=default_ontvanger)
-                kenmerk = st.text_input("Kenmerk (factuurnummer, etc.)?", value=default_kenmerk)
-                extra_info = st.text_area("Extra informatie (leg hier je situatie uit):", height=150)
-                
-                if st.button("Schrijf mijn voorbeeldbrief", type="primary"):
-                    if ontvanger:
-                        with st.spinner("Ik schrijf een voorbeeldbrief..."):
-                            try:
-                                schrijf_chain = LLMChain(llm=llm, prompt=PROMPT_SCHRIJVEN_NIEUW)
-                                response = schrijf_chain.invoke({
-                                    "doel_brief": brief_type,
-                                    "ontvanger": ontvanger,
-                                    "kenmerk": kenmerk if kenmerk else "Niet van toepassing",
-                                    "toon": toon_keuze,
-                                    "extra_info": extra_info,
-                                    "current_date": datetime.now().strftime("%d-%m-%Y")
-                                })
-                                brief_tekst = response.get('text', "Kon geen brief genereren.")
-                                st.subheader("Jouw voorbeeldbrief:")
-                                st.text_area("Je kunt deze tekst kopiëren en aanpassen:", value=brief_tekst, height=500)
-                            except Exception as e:
-                                st.error(f"Er ging iets mis bij het schrijven van de brief: {e}")
-                    else: 
-                        st.warning("Vul de naam van de ontvanger in.")
-
-        with help_col:
-            st.subheader("💡 Hulp en Tips")
-            st.markdown("---")
-            with st.expander("**Uitleg per veld**", expanded=True):
-                st.markdown("""
-                *   **Aan wie?** Vul hier de naam in van de persoon of het bedrijf aan wie je de brief stuurt. Bijvoorbeeld: `Gemeente Amsterdam` of `Mevrouw de Vries`.
-                *   **Kenmerk:** Dit is een nummer of code die op de brief staat die je hebt ontvangen. Het helpt de ontvanger om te weten waar jouw brief over gaat. Bijvoorbeeld: `Factuurnummer 12345`.
-                *   **Extra informatie:** Vertel hier in je eigen woorden wat je wilt. Wees zo duidelijk mogelijk. Wat is er gebeurd? Wat wil je dat er gebeurt?
-                """)
-
-            with st.expander("**Tips voor de inhoud**"):
-                 st.markdown("""
-                *   **Wees duidelijk:** Schrijf korte zinnen.
-                *   **Wees eerlijk:** Vertel precies wat er aan de hand is.
-                *   **Vraag om een reactie:** Vraag de ontvanger om te reageren, bijvoorbeeld: "Ik hoor graag binnen twee weken van u."
-                *   **Voorbeeld (bij uitstel van betaling):** "Ik kan de rekening nu niet betalen omdat ik mijn baan ben verloren. Kan ik in delen betalen?"
-                """)
-
-            with st.expander("**Wat betekent 'Toon'?**"):
-                st.markdown("""
-                De 'toon' bepaalt hoe de brief klinkt.
-                *   **Zakelijk en formeel:** De meest normale keuze voor officiële brieven. Heel netjes.
-                *   **Vriendelijk maar dringend:** Als je beleefd wilt blijven, maar het wel belangrijk is dat er snel iets gebeurt.
-                *   **Streng en direct:** Als je eerder geen reactie hebt gekregen en duidelijker wilt zijn.
-                """)
