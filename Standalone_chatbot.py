@@ -328,8 +328,8 @@ elif st.session_state.app_step == 'uitleggen_upload':
                             if "###DATA###" in action_part:
                                 data_line = action_part.split("###DATA###")[1].strip()
                                 data_parts = {p.split(':')[0].strip(): p.split(':')[1].strip() for p in data_line.split('|')}
-                                st.session_state.suggested_ontvanger = data_parts.get("Afzender", "")
-                                st.session_state.suggested_kenmerk = data_parts.get("Kenmerk", "")
+                                st.session_state.suggested_ontvanger = data_parts.get("Afzender", "N.v.t.")
+                                st.session_state.suggested_kenmerk = data_parts.get("Kenmerk", "N.v.t.")
                         else:
                             summary_text = full_response_text
                             st.session_state.suggested_action = None
@@ -353,16 +353,30 @@ elif st.session_state.app_step == 'schrijven_form':
         
     main_col, help_col = st.columns([2, 1])
     with main_col:
-        st.write("Kies welk soort brief je wilt sturen en vul de details in.")
+        # AANGEPAST: Logica om formulier vooraf in te vullen
+        default_brief_type = "--- Kies een optie ---"
+        default_ontvanger = ""
+        default_kenmerk = ""
         brief_options = ["--- Kies een optie ---", "Vraag om uitstel van betaling", "Bezwaar maken", "Afspraak afzeggen", "Abonnement opzeggen", "Sollicitatiebrief", "Klacht indienen"]
-        brief_type = st.selectbox("Soort brief", brief_options)
+        action_map = {"Uitstel vragen": "Vraag om uitstel van betaling", "Bezwaar maken": "Bezwaar maken", "Afspraak afzeggen": "Afspraak afzeggen", "Abonnement opzeggen": "Abonnement opzeggen", "Solliciteren": "Sollicitatiebrief", "Klacht indienen": "Klacht indienen"}
+        
+        if st.session_state.get('prefill_action'):
+            suggested_action = st.session_state.get('suggested_action')
+            if suggested_action in action_map:
+                default_brief_type = action_map[suggested_action]
+            default_ontvanger = st.session_state.get('suggested_ontvanger', "")
+            default_kenmerk = st.session_state.get('suggested_kenmerk', "")
+            st.session_state.prefill_action = False # Belangrijk: reset de vlag
+
+        st.write("Kies welk soort brief je wilt sturen en vul de details in.")
+        brief_type = st.selectbox("Soort brief", brief_options, index=brief_options.index(default_brief_type))
         toon_keuze = st.selectbox("Toon", ["Zakelijk en formeel", "Vriendelijk maar dringend", "Neutraal en informatief", "Streng en direct", "Zeer boos en ontevreden"])
         
         if brief_type != "--- Kies een optie ---":
             st.write("---")
             st.subheader("Details")
-            ontvanger = st.text_input("Aan wie?")
-            kenmerk = st.text_input("Kenmerk (factuurnummer, etc.)?")
+            ontvanger = st.text_input("Aan wie?", value=default_ontvanger)
+            kenmerk = st.text_input("Kenmerk (factuurnummer, etc.)?", value=default_kenmerk)
             extra_info = st.text_area("Extra informatie (leg hier je situatie uit):", height=150)
             
             if st.button("Schrijf mijn voorbeeldbrief", type="primary"):
@@ -463,14 +477,29 @@ elif st.session_state.app_step == 'resultaat':
                 gevolgen_text = response.get('text', "Kon de gevolgen niet analyseren.")
                 st.info(gevolgen_text)
 
-    if len(st.session_state.messages) == 1 and st.session_state.get('suggested_action'):
-        action_name = st.session_state.suggested_action
-        if action_name != "Geen actie nodig":
+        # --- GECORRIGEERDE EN VERBETERDE LOGICA VOOR VERVOLGSTAP ---
+        action_name = st.session_state.get('suggested_action')
+        letter_actions = ["Uitstel vragen", "Bezwaar maken", "Afspraak afzeggen", "Abonnement opzeggen", "Klacht indienen", "Solliciteren"]
+
+        if action_name in letter_actions:
             st.info(f"**Vervolgstap:** Het lijkt erop dat de beste actie is om een brief te sturen om **{action_name.lower()}**.")
             if st.button(f"Ja, help mij een brief schrijven voor '{action_name}'", type="primary"):
                 st.session_state.prefill_action = True
-                st.session_state.app_step = 'schrijven_form' # Ga naar het schrijfformulier
+                st.session_state.app_step = 'schrijven_form'
                 st.rerun()
+        elif action_name == 'Betalen':
+            st.info("""
+            **Vervolgstap:** De brief vraagt u om te **betalen**.
+
+            Lukt het niet om in één keer te betalen? Dan kunt u proberen om een brief te sturen om **uitstel of een betalingsregeling** te vragen.
+            """)
+            if st.button("Ja, help mij een brief schrijven om uitstel te vragen", type="primary"):
+                st.session_state.prefill_action = True
+                # Forceer de actie naar "Uitstel vragen" voor het formulier
+                st.session_state.suggested_action = "Uitstel vragen" 
+                st.session_state.app_step = 'schrijven_form'
+                st.rerun()
+        # Voor "Geen actie nodig" of andere onbekende acties wordt niets getoond.
 
     if final_prompt := st.chat_input("Stel hier een vervolgvraag..."):
         st.session_state.messages.append({"role": "user", "content": final_prompt})
