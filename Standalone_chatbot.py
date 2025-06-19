@@ -1,5 +1,3 @@
-# --- COMPLETE, GECORRIGEERDE EN HERZIENE CODE ---
-
 import streamlit as st
 import os
 import pandas as pd
@@ -16,6 +14,7 @@ import pytesseract
 from gtts import gTTS
 from supabase import create_client, Client
 from langchain.chains.llm import LLMChain
+from io import BytesIO # <<< NIEUW: Nodig voor in-memory audio
 
 # --- Configuratie & Setup ---
 load_dotenv()
@@ -51,7 +50,6 @@ def log_to_supabase(log_data):
         print(f"Fout bij het loggen naar Supabase: {e}")
         st.toast(f"Fout bij opslaan feedback.", icon="🔥")
 
-# --- VOLLEDIG HERSTELD: Functie voor het laden van de kennisbank ---
 @st.cache_resource
 def load_and_process_knowledge_base():
     """
@@ -142,48 +140,45 @@ VRAAG (NEGEER DEZE, FOCUS OP DE CONTEXT):
 HELPENDE ANTWOORD:"""
 )
 
+# <<< AANGEPAST: Prompt voor chat is strenger gemaakt.
 PROMPT_CHAT = PromptTemplate(
     input_variables=["history", "input", "original_brief", "summary"],
-    template="""Je bent een behulpzame AI-assistent. De gebruiker heeft een moeilijke brief laten samenvatten.
-De volledige, originele tekst van de brief was:
+    template="""Je bent een behulpzame AI-assistent. De gebruiker heeft een moeilijke brief laten samenvatten. Jouw taak is om vervolgvragen te beantwoorden.
+
+**REGELS:**
+1.  **GEBRUIK ALLEEN DE ORIGINELE BRIEF:** Baseer je antwoord **uitsluitend** op de "Originele Tekst van de Brief". Zoek niet naar informatie daarbuiten.
+2.  **HOUD HET SIMPEL (A2-niveau):** Gebruik korte zinnen en makkelijke woorden. Vermijd ambtelijke taal.
+3.  **WEES DIRECT:** Geef antwoord op de vraag van de gebruiker.
+
+Originele Tekst van de Brief:
 ---
 {original_brief}
 ---
-Jouw eerdere samenvatting was:
+Jouw eerdere samenvatting (alleen ter context):
 ---
 {summary}
 ---
 De huidige conversatie is:
 {history}
 
-Beantwoord nu de nieuwe vraag van de gebruiker op een simpele en duidelijke (A2-niveau) manier. Baseer je antwoord op de originele brief en de samenvatting.
+Beantwoord nu de nieuwe vraag van de gebruiker.
 Gebruiker: {input}
 Assistent:"""
 )
 
-def process_brief_and_show_results():
-    if st.session_state.user_input:
-        st.session_state.show_result = True
-        st.session_state.feedback_given = False
-        with st.spinner("Ik analyseer uw brief en maak een samenvatting..."):
-            try:
-                # DE GECORRIGEERDE LOGICA: gebruik de input direct, negeer de kennisbank
-                context_text = st.session_state.user_input
-                response = llm_chain_summary.invoke({
-                    "context": context_text,
-                    "question": "Vat deze brief samen volgens de instructies."
-                })
-                summary_text = response.get('text', 'Kon geen samenvatting maken.')
-                
-                st.session_state.ai_response = {"result": summary_text}
-                st.session_state.current_brief_text = context_text
-                st.session_state.current_summary = summary_text
-                st.session_state.messages = [{"role": "assistant", "content": summary_text}]
-            except Exception as e:
-                st.error(f"Er ging iets mis tijdens de analyse: {e}")
-                st.session_state.ai_response = None
-    else:
-        st.warning("Plak eerst tekst in het vak of upload een bestand.")
+# <<< NIEUW: Gecachte functie voor audio generatie
+@st.cache_data
+def generate_audio_from_text(text):
+    """Genereert audio van de tekst en geeft de bytes terug. Wordt gecached."""
+    try:
+        tts = gTTS(text=text, lang='nl', slow=False)
+        audio_fp = BytesIO()
+        tts.write_to_fp(audio_fp)
+        audio_fp.seek(0)
+        return audio_fp.getvalue()
+    except Exception as e:
+        print(f"Fout bij genereren audio: {e}")
+        return None
 
 def handle_feedback(score):
     if 'ai_response' in st.session_state and st.session_state.ai_response:
@@ -211,11 +206,11 @@ st.set_page_config(page_title="Hulp bij Moeilijke Brieven", layout="wide")
 if 'session_id' not in st.session_state: st.session_state.session_id = str(uuid.uuid4())
 if 'show_result' not in st.session_state: st.session_state.show_result = False
 if 'feedback_given' not in st.session_state: st.session_state.feedback_given = False
-if 'user_input' not in st.session_state: st.session_state.user_input = ""
 if 'ai_response' not in st.session_state: st.session_state.ai_response = None
 if 'messages' not in st.session_state: st.session_state.messages = []
 if 'current_brief_text' not in st.session_state: st.session_state.current_brief_text = ""
 if 'current_summary' not in st.session_state: st.session_state.current_summary = ""
+if 'current_mode' not in st.session_state: st.session_state.current_mode = "" # <<< NIEUW
 
 if not groq_api_key:
     st.error("GROQ API sleutel niet gevonden. Controleer je .env of Streamlit secrets.")
@@ -225,8 +220,6 @@ if not groq_api_key:
 llm = ChatGroq(temperature=0, groq_api_key=groq_api_key, model_name=LLM_MODEL_GROQ)
 llm_chain_summary = LLMChain(llm=llm, prompt=PROMPT_UITLEG)
 
-# HERSTELD: Laad de kennisbank bij de start van de app.
-# Deze 'vectorstore' wordt momenteel niet actief gebruikt, maar de logica is hersteld.
 with st.spinner("Voorbeelden laden..."):
     vectorstore = load_and_process_knowledge_base()
 
@@ -240,13 +233,14 @@ if st.session_state.show_result:
         st.button("Begin opnieuw met een nieuwe brief", on_click=reset_app_state, use_container_width=True, type="primary")
         st.markdown("---")
         
-        if len(st.session_state.messages) == 1:
+        # <<< AANGEPAST: Audio wordt nu via de gecachte functie geladen
+        if len(st.session_state.messages) == 1 and st.session_state.current_mode == 'uitleggen':
             st.subheader("Laat de uitleg voorlezen")
-            try:
-                tts = gTTS(text=st.session_state.current_summary, lang='nl', slow=False)
-                tts.save("uitleg.mp3")
-                st.audio("uitleg.mp3")
-            except Exception as e: st.warning(f"Voorlezen niet beschikbaar: {e}")
+            audio_bytes = generate_audio_from_text(st.session_state.current_summary)
+            if audio_bytes:
+                st.audio(audio_bytes, format="audio/mp3")
+            else:
+                st.warning("Voorlezen is op dit moment niet beschikbaar.")
             st.markdown("---")
             if not st.session_state.feedback_given:
                 st.subheader("Was deze samenvatting nuttig?")
@@ -256,6 +250,12 @@ if st.session_state.show_result:
         
         with st.expander("Privacy en Veiligheid"):
             st.write("Jouw privacy is belangrijk. Wij slaan de inhoud van jouw brieven **niet** op. De tekst wordt alleen tijdens de analyse gebruikt en daarna direct verwijderd.")
+
+    # <<< AANGEPAST: Toon de huidige modus
+    if st.session_state.current_mode == 'uitleggen':
+        st.markdown("##### Modus: ✉️ **Brief wordt uitgelegd**")
+    elif st.session_state.current_mode == 'schrijven':
+        st.markdown("##### Modus: ✍️ **Reactie wordt voorbereid**")
 
     st.header("Uitleg en gesprek")
     for message in st.session_state.messages:
@@ -285,23 +285,53 @@ else:
         agreed = st.checkbox("Ik begrijp dat mijn brief anoniem wordt verwerkt.", value=True)
         if agreed:
             uploaded_file = st.file_uploader("Upload een foto of PDF", type=["jpg", "png", "jpeg", "pdf"])
-            st.text_area("Of plak hier de tekst", key="user_text_input", height=200)
+            user_text_area = st.text_area("Of plak hier de tekst", key="user_text_input", height=200)
+            
+            # <<< AANGEPAST: Robuustere logica voor input validatie
             if st.button("Leg de brief uit", type="primary"):
                 input_text = ""
+                # Stap 1: Verzamel input uit bestand of tekstvak
                 if uploaded_file:
                     with st.spinner("Bestand wordt gelezen..."):
                         try:
                             file_ext = os.path.splitext(uploaded_file.name)[1].lower()
                             if file_ext == ".pdf":
-                                with fitz.open(stream=uploaded_file.getvalue(), filetype="pdf") as doc: input_text = "".join(p.get_text() for p in doc)
+                                with fitz.open(stream=uploaded_file.getvalue(), filetype="pdf") as doc: 
+                                    input_text = "".join(p.get_text() for p in doc)
                             elif file_ext in [".jpg", ".png", ".jpeg"]:
                                 input_text = pytesseract.image_to_string(Image.open(uploaded_file), lang='nld')
-                        except Exception as e: st.error(f"Fout bij lezen bestand: {e}")
-                elif st.session_state.user_text_input: input_text = st.session_state.user_text_input
-                st.session_state.user_input = input_text
-                process_brief_and_show_results()
-                st.rerun()
-        else: st.warning("U moet akkoord gaan om door te gaan.")
+                        except Exception as e: 
+                            st.error(f"Fout bij het lezen van het bestand: {e}")
+                            st.stop() # Stop verdere uitvoering
+                elif user_text_area:
+                    input_text = user_text_area
+
+                # Stap 2: Valideer of er wel tekst is
+                if not input_text or not input_text.strip():
+                    st.error("❌ Geen tekst gevonden. Upload een bestand of plak tekst in het vak.")
+                else:
+                    # Stap 3: Verwerk de tekst als die geldig is
+                    st.session_state.current_mode = 'uitleggen' # <<< NIEUW: Zet de modus
+                    with st.spinner("Ik analyseer uw brief en maak een samenvatting..."):
+                        try:
+                            response = llm_chain_summary.invoke({
+                                "context": input_text,
+                                "question": "Vat deze brief samen volgens de instructies."
+                            })
+                            summary_text = response.get('text', 'Kon geen samenvatting maken.')
+                            
+                            st.session_state.ai_response = {"result": summary_text}
+                            st.session_state.current_brief_text = input_text
+                            st.session_state.current_summary = summary_text
+                            st.session_state.messages = [{"role": "assistant", "content": summary_text}]
+                            st.session_state.show_result = True
+                            st.rerun() # Ga naar de resultatenpagina
+
+                        except Exception as e:
+                            st.error(f"Er ging iets mis tijdens de analyse: {e}")
+                            st.session_state.ai_response = None
+        else: 
+            st.warning("U moet akkoord gaan om door te gaan.")
             
     with tab2:
         st.header("Maak een professionele brief")
