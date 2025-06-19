@@ -9,7 +9,7 @@ pytesseract
 gTTS
 supabase
 PyMuPDF
-faiss-cpu==1.7.3
+faiss-cpu
 sentence-transformers==2.7.0
 torch==2.7.1
 transformers==4.38.2
