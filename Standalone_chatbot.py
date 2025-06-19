@@ -1,6 +1,6 @@
 # --- BENODIGDE PACKAGES ---
 # Zorg ervoor dat je deze hebt geïnstalleerd:
-# pip install streamlit pandas py-mu-pdf langchain langchain-community langchain-groq python-dotenv Pillow pytesseract python-gtts supabase-py faiss-cpu sentence-transformers streamlit-mic-recorder openai
+# pip install streamlit pandas py-mu-pdf langchain langchain-community langchain-groq python-dotenv Pillow pytesseract python-gtts supabase-py faiss-cpu sentence-transformers
 
 import streamlit as st
 import os
@@ -20,18 +20,13 @@ from supabase import create_client, Client
 from langchain.chains.llm import LLMChain
 from io import BytesIO
 from datetime import datetime
-
-# <<< NIEUWE IMPORTS >>>
-from streamlit_mic_recorder import mic_recorder
-import openai
+import re # Nodig voor het opschonen van tekst voor audio
 
 # --- Configuratie & Setup ---
 load_dotenv()
 groq_api_key = st.secrets.get("GROQ_API_KEY", os.getenv("GROQ_API_KEY"))
 supabase_url = st.secrets.get("SUPABASE_URL", os.getenv("SUPABASE_URL"))
 supabase_key = st.secrets.get("SUPABASE_KEY", os.getenv("SUPABASE_KEY"))
-# <<< NIEUW: OPENAI KEY VOOR SPRAAKHERKENNING >>>
-openai_api_key = st.secrets.get("OPENAI_API_KEY", os.getenv("OPENAI_API_KEY"))
 
 # BELANGRIJK: Zorg dat Tesseract-OCR is geïnstalleerd op je systeem.
 # Voorbeeld voor Windows: pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
@@ -47,11 +42,6 @@ if supabase_url and supabase_key:
     supabase: Client = create_client(supabase_url, supabase_key)
 else:
     supabase = None
-
-if openai_api_key:
-    openai.api_key = openai_api_key
-else:
-    openai = None
 
 # --- Einde Configuratie ---
 
@@ -107,7 +97,6 @@ def load_and_process_knowledge_base():
     vectorstore = FAISS.from_documents(documents=docs_to_index, embedding=embeddings)
     return vectorstore
 
-# <<< VERBETERD: PROMPT_UITLEG met ACTIE en DATA extractie >>>
 PROMPT_UITLEG = PromptTemplate(
     input_variables=["context", "question"],
     template="""Je bent een empathische en zeer nauwkeurige AI-assistent die laaggeletterde mensen helpt. Je taak is om de onderstaande officiële brief te analyseren en in perfect, correct Nederlands (A2-niveau) uit te leggen.
@@ -116,24 +105,21 @@ PROMPT_UITLEG = PromptTemplate(
 1. Baseer je antwoord **UITSLUITEND** op de tekst in de "CONTEXT". Verzin geen informatie.
 2. Structureer je antwoord exact zoals hieronder beschreven.
 
-**STAP 1: ANALYSEER DE TOON**
-Lees de hele brief en bepaal de toon (goed, slecht, ernstig, neutraal nieuws).
-
-**STAP 2: SCHRIJF JE ANTWOORD (DE ZICHTBARE SAMENVATTING)**
-1.  **Introductiezin:** Kies de introductie die past bij jouw analyse.
-2.  **Bullet Points:** Geef de details in een lijst. Elke bullet point MOET op een nieuwe regel beginnen met `* ` en het juiste icoon.
+**Analyseer de toon en schrijf je antwoord:**
+Begin met een introductiezin die past bij de toon (goed, slecht, ernstig, neutraal nieuws).
+Geef daarna de details in een lijst. Elke bullet point MOET op een nieuwe regel beginnen met `* ` en het juiste icoon.
     * 🏢 **Van wie:** Noem de volledige naam van de afzender.
     * 🎯 **Wat moet u doen?:** Beschrijf de actie duidelijk.
     * 💰 **Bedrag:** Noem ALLE bedragen met context.
     * 🗓️ **Datum:** Noem ALLE data met context.
     * ℹ️ **Let op:** Vermeld hier andere belangrijke details.
-3.  **Afsluitende Vraag:** Eindig altijd met: "Is dit zo duidelijk, of is er een woord dat ik extra moet uitleggen?"
+Eindig altijd met: "Is dit zo duidelijk, of is er een woord dat ik extra moet uitleggen?"
 
-**STAP 3: IDENTIFICEER DE VERVOLGACTIE (VOOR INTERN GEBRUIK)**
+**Identificeer de vervolgactie (voor intern gebruik):**
 Na je volledige antwoord, voeg een nieuwe regel toe die begint met `###ACTIE###`. Identificeer op basis van de brief de meest logische vervolgactie voor de gebruiker. Kies uit: `Betalen`, `Uitstel vragen`, `Bezwaar maken`, `Afspraak afzeggen`, `Abonnement opzeggen`, `Klacht indienen`, `Solliciteren`, `Geen actie nodig`.
 Voorbeeld: ###ACTIE### Uitstel vragen
 
-**STAP 4: IDENTIFICEER DE DATA (VOOR INTERN GEBRUIK)**
+**Identificeer de data (voor intern gebruik):**
 Na de actie-regel, voeg een nieuwe regel toe die begint met `###DATA###`. Extraheer de naam van de afzender en het kenmerk/dossiernummer. Formaat: `Afzender: [Naam] | Kenmerk: [Nummer]`. Als iets niet gevonden is, gebruik "N.v.t.".
 Voorbeeld: ###DATA### Afzender: Intrum Justitia B.V. | Kenmerk: 10987654
 
@@ -170,11 +156,9 @@ Gebruiker: {input}
 Assistent:"""
 )
 
-# <<< NIEUW: Prompt voor gevolgen-analyse >>>
 PROMPT_GEVOLGEN = PromptTemplate(
     input_variables=["context"],
     template="""Je bent een rustige en realistische AI-adviseur voor mensen die moeite hebben met lezen. Jouw taak is om uit te leggen wat de gevolgen zijn van de onderstaande brief.
-
 **INSTRUCTIES:**
 1. Baseer je antwoord **UITSLUITEND** op de tekst in de "CONTEXT".
 2. Gebruik zeer eenvoudige taal (A2-niveau). Korte zinnen.
@@ -192,7 +176,6 @@ Structureer je antwoord als een korte alinea. Bijvoorbeeld: "Als u niets doet, z
 """
 )
 
-# <<< NIEUW: Robuuste prompt voor het schrijven van brieven >>>
 PROMPT_SCHRIJVEN_NIEUW = PromptTemplate(
     input_variables=["doel_brief", "ontvanger", "kenmerk", "toon", "extra_info"],
     template="""Je bent een expert in het schrijven van formele Nederlandse brieven. Je taak is om een perfect gestructureerde en foutloze conceptbrief te genereren op B1-taalniveau.
@@ -244,7 +227,17 @@ Met vriendelijke groet,
 def generate_audio_from_text(text):
     """Genereert audio van de tekst en geeft de bytes terug. Wordt gecached."""
     try:
-        tts = gTTS(text=text, lang='nl', slow=False)
+        # Opschonen van de tekst voor betere audio
+        clean_text = re.sub(r'\*\*', '', text) # Verwijder **
+        clean_text = re.sub(r'\*', '', clean_text)  # Verwijder *
+        clean_text = re.sub(r'🏢|🎯|💰|🗓️|ℹ️', '', clean_text) # Verwijder iconen
+        clean_text = re.sub(r'Van wie:', 'Van wie:', clean_text)
+        clean_text = re.sub(r'Wat moet u doen\?:', 'Wat moet u doen?', clean_text)
+        clean_text = re.sub(r'Bedrag:', 'Bedrag:', clean_text)
+        clean_text = re.sub(r'Datum:', 'Datum:', clean_text)
+        clean_text = re.sub(r'Let op:', 'Let op:', clean_text)
+        
+        tts = gTTS(text=clean_text, lang='nl', slow=False)
         audio_fp = BytesIO()
         tts.write_to_fp(audio_fp)
         audio_fp.seek(0)
@@ -283,10 +276,6 @@ if 'current_mode' not in st.session_state: st.session_state.current_mode = ""
 if not groq_api_key:
     st.error("GROQ API sleutel niet gevonden. Controleer je .env of Streamlit secrets.")
     st.stop()
-if not openai_api_key:
-    st.warning("OpenAI API sleutel niet gevonden. Spraakherkenning zal niet werken.")
-    openai = None
-
 
 llm = ChatGroq(temperature=0, groq_api_key=groq_api_key, model_name=LLM_MODEL_GROQ)
 with st.spinner("Voorbeelden laden..."):
@@ -304,10 +293,8 @@ if st.session_state.show_result:
         if len(st.session_state.messages) == 1 and st.session_state.current_mode == 'uitleggen':
             st.subheader("Laat de uitleg voorlezen")
             
-            # <<< VERBETERD: Tekst opschonen voor audio >>>
-            summary_for_audio = st.session_state.current_summary.replace("* ", "").replace("🏢 **Van wie:**", "Van wie:").replace("🎯 **Wat moet u doen?:**", "Wat moet u doen?:").replace("💰 **Bedrag:**", "Bedrag:").replace("🗓️ **Datum:**", "Datum:").replace("ℹ️ **Let op:**", "Let op:").replace("**", "")
-            
-            audio_bytes = generate_audio_from_text(summary_for_audio)
+            # De audio wordt nu gegenereerd van de originele samenvatting, de opschoningslogica zit in de functie zelf
+            audio_bytes = generate_audio_from_text(st.session_state.current_summary)
             if audio_bytes:
                 st.audio(audio_bytes, format="audio/mp3")
             else:
@@ -315,8 +302,11 @@ if st.session_state.show_result:
             st.markdown("---")
             if not st.session_state.feedback_given:
                 st.subheader("Was deze samenvatting nuttig?")
-                if st.button("👍 Ja", use_container_width=True): handle_feedback(1); st.rerun()
-                if st.button("👎 Nee", use_container_width=True): handle_feedback(0); st.rerun()
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.button("👍 Ja", use_container_width=True): handle_feedback(1); st.rerun()
+                with col2:
+                    if st.button("👎 Nee", use_container_width=True): handle_feedback(0); st.rerun()
             else: st.success("Bedankt voor je feedback!")
         
         with st.expander("Privacy en Veiligheid"):
@@ -329,7 +319,6 @@ if st.session_state.show_result:
     for message in st.session_state.messages:
         with st.chat_message(message["role"]): st.markdown(message["content"])
 
-    # <<< NIEUW: "Wat betekent dit voor mij?" expander >>>
     if len(st.session_state.messages) == 1:
         with st.expander("🤔 Wat betekent dit voor mij? Klik hier voor extra uitleg."):
             with st.spinner("Ik analyseer de gevolgen..."):
@@ -338,36 +327,17 @@ if st.session_state.show_result:
                 gevolgen_text = response.get('text', "Kon de gevolgen niet analyseren.")
                 st.info(gevolgen_text)
 
-    # <<< NIEUW: Slimme vervolgstap knop >>>
     if len(st.session_state.messages) == 1 and st.session_state.get('suggested_action'):
         action_name = st.session_state.suggested_action
         if action_name != "Geen actie nodig":
-            st.markdown("---")
             st.info(f"**Vervolgstap:** Het lijkt erop dat de beste actie is om een brief te sturen om **{action_name.lower()}**.")
             if st.button(f"Ja, help mij een brief schrijven voor '{action_name}'", type="primary"):
                 st.session_state.prefill_action = True
                 st.session_state.show_result = False
                 st.rerun()
 
-    # <<< NIEUW: Spraak-naar-tekst chat input >>>
-    final_prompt = None
-    if openai:
-        audio_info = mic_recorder(start_prompt="🎤 Stel je vraag met je stem", stop_prompt="⏹️ Stop opname", key='mic_recorder')
-        if audio_info and audio_info['bytes']:
-            with st.spinner("Je spraak wordt verwerkt..."):
-                audio_bio = BytesIO(audio_info['bytes'])
-                audio_bio.name = 'opname.wav'
-                try:
-                    transcript = openai.audio.transcriptions.create(model="whisper-1", file=audio_bio, language="nl")
-                    final_prompt = transcript.text
-                except Exception as e:
-                    st.error(f"Fout bij spraakherkenning: {e}")
-    
-    text_prompt = st.chat_input("Of typ hier je vraag...")
-    if text_prompt:
-        final_prompt = text_prompt
-
-    if final_prompt:
+    # De chat input is nu alleen tekst, geen spraak
+    if final_prompt := st.chat_input("Of typ hier je vraag..."):
         st.session_state.messages.append({"role": "user", "content": final_prompt})
         with st.chat_message("user"): st.markdown(final_prompt)
         with st.spinner("Even denken..."):
@@ -417,7 +387,6 @@ else:
                             response = llm_chain_summary.invoke({"context": input_text, "question": "Vat deze brief samen."})
                             full_response_text = response.get('text', 'Kon geen samenvatting maken.')
 
-                            # <<< VERBETERD: Parse de output voor actie en data >>>
                             if "###ACTIE###" in full_response_text:
                                 parts = full_response_text.split("###ACTIE###")
                                 summary_text = parts[0].strip()
@@ -443,51 +412,80 @@ else:
             st.warning("U moet akkoord gaan om door te gaan.")
             
     with tab2:
-        st.header("Maak een professionele brief")
-        
-        # <<< VERBETERD: Logica om formulier vooraf in te vullen >>>
-        default_brief_type = "--- Kies een optie ---"
-        default_ontvanger = ""
-        default_kenmerk = ""
-        brief_options = ["--- Kies een optie ---", "Vraag om uitstel van betaling", "Bezwaar maken", "Afspraak afzeggen", "Abonnement opzeggen", "Sollicitatiebrief", "Klacht indienen"]
-        action_map = {"Uitstel vragen": "Vraag om uitstel van betaling", "Bezwaar maken": "Bezwaar maken", "Afspraak afzeggen": "Afspraak afzeggen", "Abonnement opzeggen": "Abonnement opzeggen", "Solliciteren": "Sollicitatiebrief", "Klacht indienen": "Klacht indienen"}
-        
-        if st.session_state.get('prefill_action'):
-            suggested_action = st.session_state.get('suggested_action')
-            if suggested_action in action_map:
-                default_brief_type = action_map[suggested_action]
-            default_ontvanger = st.session_state.get('suggested_ontvanger', "")
-            default_kenmerk = st.session_state.get('suggested_kenmerk', "")
-            st.session_state.prefill_action = False
+        # --- Nieuwe layout met zijkolom voor hulp ---
+        main_col, help_col = st.columns([2, 1])
 
-        st.write("Kies welk soort brief je wilt sturen en vul de details in.")
-        brief_type = st.selectbox("**Stap 1: Soort brief**", brief_options, index=brief_options.index(default_brief_type))
-        toon_keuze = st.selectbox("**Stap 2: Toon**", ["Zakelijk en formeel", "Vriendelijk maar dringend", "Neutraal en informatief", "Streng en direct", "Zeer boos en ontevreden"])
-        
-        if brief_type != "--- Kies een optie ---":
-            st.write("---"); st.subheader("**Stap 3: Details**")
-            ontvanger = st.text_input("Aan wie?", value=default_ontvanger)
-            kenmerk = st.text_input("Kenmerk (factuurnummer, etc.)?", value=default_kenmerk)
-            extra_info = st.text_area("Extra informatie (leg hier je situatie uit):")
+        with main_col:
+            st.header("Maak een professionele brief")
             
-            if st.button("Schrijf mijn voorbeeldbrief", type="primary"):
-                if ontvanger:
-                    with st.spinner("Ik schrijf een voorbeeldbrief..."):
-                        try:
-                            # <<< VERBETERD: Gebruik de robuuste chain >>>
-                            schrijf_chain = LLMChain(llm=llm, prompt=PROMPT_SCHRIJVEN_NIEUW)
-                            response = schrijf_chain.invoke({
-                                "doel_brief": brief_type,
-                                "ontvanger": ontvanger,
-                                "kenmerk": kenmerk if kenmerk else "Niet van toepassing",
-                                "toon": toon_keuze,
-                                "extra_info": extra_info,
-                                "current_date": datetime.now().strftime("%d-%m-%Y")
-                            })
-                            brief_tekst = response.get('text', "Kon geen brief genereren.")
-                            st.subheader("Jouw voorbeeldbrief:")
-                            st.text_area("Je kunt deze tekst kopiëren en aanpassen:", value=brief_tekst, height=500)
-                        except Exception as e:
-                            st.error(f"Er ging iets mis bij het schrijven van de brief: {e}")
-                else: 
-                    st.warning("Vul de naam van de ontvanger in.")
+            default_brief_type = "--- Kies een optie ---"
+            default_ontvanger = ""
+            default_kenmerk = ""
+            brief_options = ["--- Kies een optie ---", "Vraag om uitstel van betaling", "Bezwaar maken", "Afspraak afzeggen", "Abonnement opzeggen", "Sollicitatiebrief", "Klacht indienen"]
+            action_map = {"Uitstel vragen": "Vraag om uitstel van betaling", "Bezwaar maken": "Bezwaar maken", "Afspraak afzeggen": "Afspraak afzeggen", "Abonnement opzeggen": "Abonnement opzeggen", "Solliciteren": "Sollicitatiebrief", "Klacht indienen": "Klacht indienen"}
+            
+            if st.session_state.get('prefill_action'):
+                suggested_action = st.session_state.get('suggested_action')
+                if suggested_action in action_map:
+                    default_brief_type = action_map[suggested_action]
+                default_ontvanger = st.session_state.get('suggested_ontvanger', "")
+                default_kenmerk = st.session_state.get('suggested_kenmerk', "")
+                st.session_state.prefill_action = False
+
+            st.write("Kies welk soort brief je wilt sturen en vul de details in.")
+            brief_type = st.selectbox("Soort brief", brief_options, index=brief_options.index(default_brief_type))
+            toon_keuze = st.selectbox("Toon", ["Zakelijk en formeel", "Vriendelijk maar dringend", "Neutraal en informatief", "Streng en direct", "Zeer boos en ontevreden"])
+            
+            if brief_type != "--- Kies een optie ---":
+                st.write("---")
+                st.subheader("Details")
+                ontvanger = st.text_input("Aan wie?", value=default_ontvanger)
+                kenmerk = st.text_input("Kenmerk (factuurnummer, etc.)?", value=default_kenmerk)
+                extra_info = st.text_area("Extra informatie (leg hier je situatie uit):", height=150)
+                
+                if st.button("Schrijf mijn voorbeeldbrief", type="primary"):
+                    if ontvanger:
+                        with st.spinner("Ik schrijf een voorbeeldbrief..."):
+                            try:
+                                schrijf_chain = LLMChain(llm=llm, prompt=PROMPT_SCHRIJVEN_NIEUW)
+                                response = schrijf_chain.invoke({
+                                    "doel_brief": brief_type,
+                                    "ontvanger": ontvanger,
+                                    "kenmerk": kenmerk if kenmerk else "Niet van toepassing",
+                                    "toon": toon_keuze,
+                                    "extra_info": extra_info,
+                                    "current_date": datetime.now().strftime("%d-%m-%Y")
+                                })
+                                brief_tekst = response.get('text', "Kon geen brief genereren.")
+                                st.subheader("Jouw voorbeeldbrief:")
+                                st.text_area("Je kunt deze tekst kopiëren en aanpassen:", value=brief_tekst, height=500)
+                            except Exception as e:
+                                st.error(f"Er ging iets mis bij het schrijven van de brief: {e}")
+                    else: 
+                        st.warning("Vul de naam van de ontvanger in.")
+
+        with help_col:
+            st.subheader("💡 Hulp en Tips")
+            st.markdown("---")
+            with st.expander("**Uitleg per veld**", expanded=True):
+                st.markdown("""
+                *   **Aan wie?** Vul hier de naam in van de persoon of het bedrijf aan wie je de brief stuurt. Bijvoorbeeld: `Gemeente Amsterdam` of `Mevrouw de Vries`.
+                *   **Kenmerk:** Dit is een nummer of code die op de brief staat die je hebt ontvangen. Het helpt de ontvanger om te weten waar jouw brief over gaat. Bijvoorbeeld: `Factuurnummer 12345`.
+                *   **Extra informatie:** Vertel hier in je eigen woorden wat je wilt. Wees zo duidelijk mogelijk. Wat is er gebeurd? Wat wil je dat er gebeurt?
+                """)
+
+            with st.expander("**Tips voor de inhoud**"):
+                 st.markdown("""
+                *   **Wees duidelijk:** Schrijf korte zinnen.
+                *   **Wees eerlijk:** Vertel precies wat er aan de hand is.
+                *   **Vraag om een reactie:** Vraag de ontvanger om te reageren, bijvoorbeeld: "Ik hoor graag binnen twee weken van u."
+                *   **Voorbeeld (bij uitstel van betaling):** "Ik kan de rekening nu niet betalen omdat ik mijn baan ben verloren. Kan ik in delen betalen?"
+                """)
+
+            with st.expander("**Wat betekent 'Toon'?**"):
+                st.markdown("""
+                De 'toon' bepaalt hoe de brief klinkt.
+                *   **Zakelijk en formeel:** De meest normale keuze voor officiële brieven. Heel netjes.
+                *   **Vriendelijk maar dringend:** Als je beleefd wilt blijven, maar het wel belangrijk is dat er snel iets gebeurt.
+                *   **Streng en direct:** Als je eerder geen reactie hebt gekregen en duidelijker wilt zijn.
+                """)
