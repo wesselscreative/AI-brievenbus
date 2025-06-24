@@ -2,7 +2,8 @@ read.md
 # AI Hulp voor Moeilijke Brieven (Prototype)
 
 ## 🧠 Beschrijving
-Een lokale chatbot met het Phi-3 Mini model via Ollama. Gebouwd met Python en LangChain. Doel: lokaal testen en verder uitbreiden met geheugen, logging en een frontend (Gradio of Streamlit).
+Een digitale assistent die complexe, officiële brieven vertaalt naar begrijpelijke taal (A2-niveau). 
+Dit project gebruikt de kracht van Large Language Models om een brug te slaan over taalbarrières en mensen meer controle te geven over hun eigen administratie.
 
 ## 📦 Installatie
 ```bash
