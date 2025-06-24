@@ -1,5 +1,5 @@
 read.md
-# Phi-3 Standalone Chatbot (Prototype)
+# AI Hulp voor Moeilijke Brieven (Prototype)
 
 ## 🧠 Beschrijving
 Een lokale chatbot met het Phi-3 Mini model via Ollama. Gebouwd met Python en LangChain. Doel: lokaal testen en verder uitbreiden met geheugen, logging en een frontend (Gradio of Streamlit).
