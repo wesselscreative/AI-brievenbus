@@ -35,34 +35,40 @@ Daarnaast helpt de tool de gebruiker bij het opstellen van een passende reactie.
 - Dataverwerking: PyMuPDF (voor PDF's), Pytesseract & Pillow (voor OCR op afbeeldingen)
 - Services: gTTS (Text-to-Speech), Supabase (voor anonieme feedback-logging)
 
-## 💻 Lokaal Opzetten & Draaien
-Wil je dit project zelf draaien? Volg deze stappen:
+## 💻 Installatie & Lokaal Draaien
+Wil je dit project zelf op je computer draaien? Volg deze stappen:
 
-1. Clone de repository:
-git clone https://github.com/wesselscreative/AI-brievenbus.git
-cd AI-brievenbus
+1.  **Clone de repository:**
+    ```bash
+    git clone https://github.com/wesselscreative/AI-brievenbus.git
+    cd AI-brievenbus
+    ```
 
-2. Installeer de benodigde packages:
-Zorg ervoor dat je een requirements.txt bestand in je project hebt.
+2.  **Maak een virtuele omgeving en activeer deze:**
+    (Dit is een best practice om je project-packages gescheiden te houden)
+    ```bash
+    python -m venv venv
+    source venv/bin/activate  # Op Windows: venv\Scripts\activate
+    ```
 
-pip install -r requirements.txt
+3.  **Installeer de benodigde packages:**
+    ```bash
+    pip install -r requirements.txt
+    ```
 
-3. Stel je geheime sleutels in:
-Maak een bestand genaamd .env in de hoofdmap en voeg je API-sleutels toe:
+4.  **Stel je geheime sleutels in:**
+    Maak een bestand genaamd `.env` en voeg je API-sleutels toe:
+    ```
+    GROQ_API_KEY="jouw_groq_api_sleutel"
+    SUPABASE_URL="jouw_supabase_url"
+    SUPABASE_KEY="jouw_supabase_key"
+    ```
 
-GROQ_API_KEY="jouw_groq_api_sleutel"
-SUPABASE_URL="jouw_supabase_url"
-SUPABASE_KEY="jouw_supabase_key"
-
-4. Start de applicatie:
-streamlit run app.py
+5.  **Start de applicatie:**
+    ```bash
+    streamlit run app.py
+    ```
 
 ## 📜 Licentie
 Dit project is beschikbaar gesteld onder de MIT License. Zie het LICENSE-bestand voor de volledige tekst.
 
-
-## 📦 Installatie
-```bash
-python -m venv venv
-source venv/bin/activate  # of venv\Scripts\activate op Windows
-pip install -r requirements.txt
