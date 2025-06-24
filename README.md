@@ -19,6 +19,8 @@ Daarnaast helpt de tool de gebruiker bij het opstellen van een passende reactie.
 ## 🚀 Live Demo
 ➡️ Check hier de tool om live te proberen! --> https://ai-brievenhulp.streamlit.app/
 
+
+
 ## ✨ Belangrijkste Features
 - 📄 Simpele Samenvattingen: Upload een PDF, afbeelding (JPG/PNG) of plak tekst en ontvang direct een duidelijke uitleg op A2-niveau.
 - ✍️ Hulp bij Schrijven: Genereer een professioneel concept voor een formele brief (B1-niveau) voor o.a. uitstel van betaling, bezwaar of een klacht.
@@ -26,6 +28,13 @@ Daarnaast helpt de tool de gebruiker bij het opstellen van een passende reactie.
 - 🌐 Vertaalopties: Vertaal de samenvatting naar het Engels, Arabisch, Turks of Pools.
 - 💬 Interactieve Chat: Stel vervolgvragen over de brief om specifieke details op te helderen.
 - 🕵️ Actie-suggesties: De tool identificeert de meest logische vervolgstap en kan het formulier voor het schrijven van een brief alvast voor je invullen.
+
+## 🛠️ Tech Stack
+- Frontend: Streamlit
+- AI & Taalmodellen: LangChain, Groq API (Llama 3), SentenceTransformers
+- Dataverwerking: PyMuPDF (voor PDF's), Pytesseract & Pillow (voor OCR op afbeeldingen)
+- Services: gTTS (Text-to-Speech), Supabase (voor anonieme feedback-logging)
+
 
 ## 📦 Installatie
 ```bash
