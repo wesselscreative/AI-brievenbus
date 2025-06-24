@@ -35,6 +35,31 @@ Daarnaast helpt de tool de gebruiker bij het opstellen van een passende reactie.
 - Dataverwerking: PyMuPDF (voor PDF's), Pytesseract & Pillow (voor OCR op afbeeldingen)
 - Services: gTTS (Text-to-Speech), Supabase (voor anonieme feedback-logging)
 
+## 💻 Lokaal Opzetten & Draaien
+Wil je dit project zelf draaien? Volg deze stappen:
+
+1. Clone de repository:
+git clone https://github.com/wesselscreative/AI-brievenbus.git
+cd AI-brievenbus
+
+2. Installeer de benodigde packages:
+Zorg ervoor dat je een requirements.txt bestand in je project hebt.
+
+pip install -r requirements.txt
+
+3. Stel je geheime sleutels in:
+Maak een bestand genaamd .env in de hoofdmap en voeg je API-sleutels toe:
+
+GROQ_API_KEY="jouw_groq_api_sleutel"
+SUPABASE_URL="jouw_supabase_url"
+SUPABASE_KEY="jouw_supabase_key"
+
+4. Start de applicatie:
+streamlit run app.py
+
+## 📜 Licentie
+Dit project is beschikbaar gesteld onder de MIT License. Zie het LICENSE-bestand voor de volledige tekst.
+
 
 ## 📦 Installatie
 ```bash
