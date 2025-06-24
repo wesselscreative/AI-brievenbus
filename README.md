@@ -17,7 +17,7 @@ Deze tool analyseert de inhoud van een brief en zet deze om in een eenvoudige, g
 Daarnaast helpt de tool de gebruiker bij het opstellen van een passende reactie.
 
 ## 🚀 Live Demo
-➡️ Check hier de tool om live te proberen! --> https://ai-brievenhulp.streamlit.app/
+[➡️ Klik hier om de tool live te proberen!](https://ai-brievenhulp.streamlit.app/)
 
 
 
