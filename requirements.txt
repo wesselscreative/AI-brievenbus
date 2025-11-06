@@ -1,9 +1,9 @@
-streamlit
-pandas
-langchain
-langchain-community
-langchain-core
-langchain-groq
+streamlit==1.46.0
+pandas>=2.3.0,<2.4
+langchain==0.1.16
+langchain-community==0.0.34
+langchain-core==0.1.45
+langchain-groq==0.1.0
 python-dotenv
 Pillow
 pytesseract
