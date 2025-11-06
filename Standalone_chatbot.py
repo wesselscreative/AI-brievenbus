@@ -17,7 +17,7 @@ from PIL import Image
 import pytesseract
 from gtts import gTTS
 from supabase import create_client, Client
-from langchain_community.chains import LLMChain
+from langchain.chains import LLMChain
 from io import BytesIO
 from datetime import datetime
 import re
